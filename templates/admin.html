@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+{% block title %}Admin Command Desk{% endblock %}
+
+{% block content %}
+
+<!-- Reject Comment Modal -->
+<div id="rejectModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+    <h2 class="text-base font-bold text-slate-800 mb-1">Reject Pass Request</h2>
+    <p class="text-sm text-slate-500 mb-4">Optionally provide a reason to communicate to the requester.</p>
+    <textarea id="rejectComment" rows="3" placeholder="Reason for rejection (optional)…"
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                     text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                     focus:ring-red-400 resize-none mb-4"></textarea>
+    <div class="flex gap-3">
+      <button id="rejectModalClose"
+              class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl transition">
+        Cancel
+      </button>
+      <button id="rejectConfirmBtn"
+              class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2.5 rounded-xl transition">
+        Confirm Reject
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Page header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Admin Command Desk</h1>
+    <p class="text-slate-500 text-sm mt-1">Security management, approvals, and campus analytics</p>
+  </div>
+</div>
+
+<!-- ═══════════ LIVE ANALYTICS ROW ═══════════ -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">On Campus Now</p>
+    <p class="text-3xl font-black text-indigo-600">{{ on_campus }}</p>
+    <p class="text-xs text-slate-400 mt-1">Entry − Exit today</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Approved / Yet to Arrive</p>
+    <p class="text-3xl font-black text-sky-600">{{ approved_not_arrived }}</p>
+    <p class="text-xs text-slate-400 mt-1">Today's passes not yet scanned</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pending Approvals</p>
+    <p class="text-3xl font-black text-amber-500">{{ pending_count }}</p>
+    <p class="text-xs text-slate-400 mt-1">Require your action</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Blacklisted</p>
+    <p class="text-3xl font-black text-red-600">{{ blacklist | length }}</p>
+    <p class="text-xs text-slate-400 mt-1">Banned individuals</p>
+  </div>
+</div>
+
+<!-- ═══════════ TAB NAVIGATION ═══════════ -->
+<div class="flex flex-wrap gap-2 mb-6">
+  <button data-admin-tab="pending"
+          class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white transition">
+    Approval Queue
+    {% if pending_count > 0 %}
+      <span class="ml-1.5 bg-amber-400 text-slate-900 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pending_count }}</span>
+    {% endif %}
+  </button>
+  <button data-admin-tab="all"
+          class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border border-slate-200 transition">
+    All Requests
+  </button>
+  <button data-admin-tab="blacklist"
+          class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border border-slate-200 transition">
+    Blacklist Control
+  </button>
+  <button data-admin-tab="users"
+          class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border border-slate-200 transition">
+    User Management
+  </button>
+</div>
+
+<!-- ═══════════ PANEL: PENDING QUEUE ═══════════ -->
+<div data-admin-panel="pending">
+
+  <!-- Bulk action bar -->
+  <div class="flex items-center justify-between mb-4">
+    <p class="text-sm text-slate-600 font-medium">
+      {{ pending_internal | length }} internal · {{ pending_visitor | length }} visitor
+    </p>
+    <button id="bulkApproveBtn"
+            class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold
+                   px-4 py-2 rounded-xl transition shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+      </svg>
+      Bulk Approve Selected
+    </button>
+  </div>
+
+  <!-- ── Internal Pending ── -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-slate-700">Internal Pass Requests</h3>
+      <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full">
+        {{ pending_internal | length }} pending
+      </span>
+    </div>
+    {% if pending_internal %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-100">
+            <tr>
+              <th class="px-4 py-3 text-left">
+                <input type="checkbox" id="selectAll" class="rounded border-slate-300 text-indigo-600">
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Requester</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitor Details</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Destination</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Reason</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for req in pending_internal %}
+              <tr id="row-internal-{{ req.id }}" class="hover:bg-slate-50 transition">
+                <td class="px-4 py-3">
+                  <input type="checkbox" class="bulk-check rounded border-slate-300 text-indigo-600"
+                         value="{{ req.id }}" data-pass-type="internal">
+                </td>
+                <td class="px-4 py-3">
+                  <p class="font-semibold text-slate-800 text-xs">{{ req.requester_name }}</p>
+                  <p class="text-slate-400 text-xs">{{ req.requester_type }}</p>
+                </td>
+                <td class="px-4 py-3 space-y-0.5">
+                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.visitor_name }}</span></p>
+                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.visitor_national_id }}</p>
+                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Tel:</span> {{ req.visitor_phone }}</p>
+                  {% if req.visitor_vehicle_reg %}
+                    <p class="text-xs text-slate-500"><span class="text-slate-400 font-medium">Veh:</span> 🚗 {{ req.visitor_vehicle_reg }}</p>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-700 font-medium text-xs">{{ req.destination }}</td>
+                <td class="px-4 py-3 text-slate-600 text-xs">{{ req.visit_date.strftime('%d %b %Y') }}</td>
+                <td class="px-4 py-3 text-slate-500 text-xs font-mono">{{ req.time_window }}</td>
+                <td class="px-4 py-3 text-slate-500 text-xs max-w-[10rem]">
+                  <span title="{{ req.reason }}">{{ req.reason | truncate(50) }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="status-badge px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                    Pending
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <button data-approve="{{ req.id }}" data-pass-type="internal"
+                            class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold
+                                   px-3 py-1.5 rounded-lg transition">
+                      Approve
+                    </button>
+                    <button data-reject="{{ req.id }}" data-pass-type="internal"
+                            class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold
+                                   px-3 py-1.5 rounded-lg transition">
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-8 text-center">
+        <p class="text-sm text-slate-500">No pending internal requests. 🎉</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Visitor Pending ── -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-slate-700">Visitor Requests</h3>
+      <span class="px-2 py-0.5 bg-sky-100 text-sky-700 text-xs font-semibold rounded-full">
+        {{ pending_visitor | length }} pending
+      </span>
+    </div>
+    {% if pending_visitor %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-100">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">National ID</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Department</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Purpose</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for req in pending_visitor %}
+              <tr id="row-visitor-{{ req.id }}" class="hover:bg-slate-50 transition">
+                <td class="px-4 py-3">
+                  <p class="font-semibold text-slate-800 text-xs">{{ req.name }}</p>
+                  <p class="text-slate-400 text-xs">{{ req.email }}</p>
+                </td>
+                <td class="px-4 py-3 text-xs font-mono text-slate-600">{{ req.national_id }}</td>
+                <td class="px-4 py-3 text-xs text-slate-600">{{ req.phone }}</td>
+                <td class="px-4 py-3 text-xs text-slate-700">{{ req.department }}</td>
+                <td class="px-4 py-3 text-xs text-slate-600">{{ req.visit_date.strftime('%d %b %Y') }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500 max-w-[10rem]">
+                  <span title="{{ req.purpose }}">{{ req.purpose | truncate(50) }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="status-badge px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                    Pending
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <button data-approve="{{ req.id }}" data-pass-type="visitor"
+                            class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold
+                                   px-3 py-1.5 rounded-lg transition">
+                      Approve
+                    </button>
+                    <button data-reject="{{ req.id }}" data-pass-type="visitor"
+                            class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold
+                                   px-3 py-1.5 rounded-lg transition">
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-8 text-center">
+        <p class="text-sm text-slate-500">No pending visitor requests. 🎉</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ═══════════ PANEL: ALL REQUESTS ═══════════ -->
+<div data-admin-panel="all" class="hidden">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <h3 class="text-sm font-bold text-slate-700">All Internal Pass Requests (Last 50)</h3>
+    </div>
+    {% if all_internal %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-100">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Requester</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitor Details</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Destination</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Reason</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Token</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for req in all_internal %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-xs text-slate-400">{{ req.id }}</td>
+                <td class="px-4 py-3 text-xs font-medium text-slate-800">{{ req.requester_name }}</td>
+                <td class="px-4 py-3 space-y-0.5">
+                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.visitor_name }}</span></p>
+                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.visitor_national_id }}</p>
+                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Tel:</span> {{ req.visitor_phone }}</p>
+                  {% if req.visitor_vehicle_reg %}
+                    <p class="text-xs text-slate-500"><span class="text-slate-400 font-medium">Veh:</span> 🚗 {{ req.visitor_vehicle_reg }}</p>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-xs text-slate-600">{{ req.destination }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500">{{ req.visit_date.strftime('%d %b %Y') }}</td>
+                <td class="px-4 py-3">
+                  {% set sc = {'Approved':'bg-green-100 text-green-800','Pending':'bg-amber-100 text-amber-800','Rejected':'bg-red-100 text-red-800','Expired':'bg-slate-100 text-slate-600', 'Checked In':'bg-blue-100 text-blue-800', 'Checked Out':'bg-slate-100 text-slate-600'} %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ sc.get(req.status, 'bg-slate-100 text-slate-600') }}">
+                    {{ req.status }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-xs text-slate-500 max-w-[10rem]">
+                  <span title="{{ req.reason }}">{{ req.reason | truncate(40) }}</span>
+                </td>
+                <td class="px-4 py-3 text-xs font-mono text-slate-400">
+                  {{ req.qr_token[:12] + '…' if req.qr_token else '—' }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-8 text-center"><p class="text-sm text-slate-500">No records yet.</p></div>
+    {% endif %}
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <h3 class="text-sm font-bold text-slate-700">All Visitor Requests (Last 50)</h3>
+    </div>
+    {% if all_visitor %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-100">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">National ID</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Department</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Purpose</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for req in all_visitor %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-xs text-slate-400">{{ req.id }}</td>
+                <td class="px-4 py-3 text-xs font-medium text-slate-800">{{ req.name }}</td>
+                <td class="px-4 py-3 text-xs font-mono text-slate-500">{{ req.national_id }}</td>
+                <td class="px-4 py-3 text-xs text-slate-600">{{ req.department }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500">{{ req.visit_date.strftime('%d %b %Y') }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500 max-w-[10rem]">
+                  <span title="{{ req.purpose }}">{{ req.purpose | truncate(40) }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  {% set sc = {'Approved':'bg-green-100 text-green-800','Pending':'bg-amber-100 text-amber-800','Rejected':'bg-red-100 text-red-800','Expired':'bg-slate-100 text-slate-600', 'Checked In':'bg-blue-100 text-blue-800', 'Checked Out':'bg-slate-100 text-slate-600'} %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ sc.get(req.status, 'bg-slate-100 text-slate-600') }}">
+                    {{ req.status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-8 text-center"><p class="text-sm text-slate-500">No visitor records yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══════════ PANEL: BLACKLIST ═══════════ -->
+<div data-admin-panel="blacklist" class="hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Add to Blacklist Form -->
+    <div class="bg-white rounded-2xl border border-red-100 shadow-sm p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+          <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+          </svg>
+        </div>
+        <h3 class="text-sm font-bold text-slate-800">Add to Blacklist</h3>
+      </div>
+
+      <form id="blacklistForm" novalidate class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="bl_national_id">
+            National ID <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="bl_national_id" name="bl_national_id" required
+                 placeholder="e.g. GHA-000000001"
+                 class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                        text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                        focus:ring-red-400 focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="bl_name">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="bl_name" name="bl_name" required
+                 placeholder="Full legal name"
+                 class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                        text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                        focus:ring-red-400 focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="bl_reason">
+            Violation Reason <span class="text-red-500">*</span>
+          </label>
+          <textarea id="bl_reason" name="bl_reason" required rows="2"
+                    placeholder="Brief description of the violation…"
+                    class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                           text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                           focus:ring-red-400 focus:border-transparent transition resize-none"></textarea>
+        </div>
+        <button type="submit"
+                class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2.5 rounded-xl transition">
+          Add to Blacklist
+        </button>
+      </form>
+    </div>
+
+    <!-- Blacklist Table -->
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-700">Blacklisted Individuals</h3>
+        <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+          {{ blacklist | length }} entries
+        </span>
+      </div>
+
+      {% if blacklist %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">National ID</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Reason</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Added</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              {% for entry in blacklist %}
+                <tr id="bl-row-{{ entry.id }}" class="hover:bg-slate-50">
+                  <td class="px-4 py-3 text-xs font-semibold text-slate-800">{{ entry.name }}</td>
+                  <td class="px-4 py-3 text-xs font-mono text-slate-600">{{ entry.national_id }}</td>
+                  <td class="px-4 py-3 text-xs text-slate-500 max-w-[12rem]">
+                    <span title="{{ entry.reason }}">{{ entry.reason | truncate(60) }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-400">{{ entry.added_at.strftime('%d %b %Y') }}</td>
+                  <td class="px-4 py-3">
+                    <button data-remove-blacklist="{{ entry.id }}"
+                            class="text-red-500 hover:text-red-700 text-xs font-semibold transition">
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-10 text-center">
+          <div class="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <p class="text-sm font-semibold text-slate-500">Blacklist is empty</p>
+          <p class="text-xs text-slate-400 mt-1">No individuals have been banned from campus.</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ PANEL: USER MANAGEMENT ═══════════ -->
+<div data-admin-panel="users" class="hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Create New User Form -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center">
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+          </svg>
+        </div>
+        <h3 class="text-sm font-bold text-slate-800">Create New User</h3>
+      </div>
+
+      <form id="createUserForm" novalidate class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="cu_name">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="cu_name" name="cu_name" required
+                 placeholder="e.g. John Doe"
+                 class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                        text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                        focus:ring-indigo-400 focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="cu_login_id">
+            Login ID <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="cu_login_id" name="cu_login_id" required
+                 placeholder="e.g. staff02"
+                 class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                        text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                        focus:ring-indigo-400 focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="cu_role">
+            Role <span class="text-red-500">*</span>
+          </label>
+          <select id="cu_role" name="cu_role" required
+                  class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                         text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400
+                         focus:border-transparent transition">
+            <option value="">Select role</option>
+            <option value="admin">Admin</option>
+            <option value="guard">Guard</option>
+            <option value="internal">Internal (Staff/Student)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="cu_password">
+            Password <span class="text-red-500">*</span>
+          </label>
+          <input type="password" id="cu_password" name="cu_password" required
+                 placeholder="Enter password"
+                 class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                        text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2
+                        focus:ring-indigo-400 focus:border-transparent transition" />
+        </div>
+        <button type="submit"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl
+                       transition-colors duration-150 text-sm">
+          Create User
+        </button>
+      </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-700">All Users</h3>
+        <div class="flex items-center gap-3">
+          <span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full">
+            {{ all_users | length }} users
+          </span>
+          <a href="/api/admin/export/csv"
+             class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition">
+            📥 Download CSV
+          </a>
+        </div>
+      </div>
+
+      {% if all_users %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Login ID</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              {% for u in all_users %}
+                <tr id="user-row-{{ u.id }}" class="hover:bg-slate-50">
+                  <td class="px-4 py-3 text-xs font-semibold text-slate-800">{{ u.name }}</td>
+                  <td class="px-4 py-3 text-xs font-mono text-slate-600">{{ u.login_id }}</td>
+                  <td class="px-4 py-3 text-xs text-slate-500 capitalize">{{ u.role }}</td>
+                  <td class="px-4 py-3">
+                    <button data-delete-user="{{ u.id }}"
+                            class="text-red-500 hover:text-red-700 text-xs font-semibold transition">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-10 text-center">
+          <div class="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </div>
+          <p class="text-sm font-semibold text-slate-500">No users found</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PASS REQUESTS BY DEPARTMENT CHART ═══════════ -->
+<div class="mt-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+  <h3 class="text-sm font-bold text-slate-700 mb-4">Pass Requests by Department</h3>
+  <div class="relative h-64 w-full"><canvas id="deptChart"></canvas></div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function initDeptChart() {
+    const ctx = document.getElementById("deptChart");
+    if (!ctx) return;
+    const labels = {{ chart_labels | tojson }};
+    const data = {{ chart_data | tojson }};
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Pass Requests",
+          data: data,
+          backgroundColor: "#4f46e5",
+          borderRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+          },
+        },
+      },
+    });
+  })();
+</script>
+{% endblock %}

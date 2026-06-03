@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Staff Login{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center py-12">
+  <div class="w-full max-w-md">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 shadow-lg mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
+             d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900">Secure Staff Login</h1>
+      <p class="text-slate-500 text-sm mt-1">Access restricted to authorised personnel only</p>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+
+      {% if error %}
+        <div class="mb-4 p-3 rounded-xl bg-red-50 border border-red-300 text-red-700 text-sm font-medium">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('auth_page') }}" class="space-y-5" novalidate>
+
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="login_id">
+            Login ID
+          </label>
+          <input type="text" id="login_id" name="login_id" required
+                 placeholder="e.g. admin / guard01 / student01"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="password">
+            Password
+          </label>
+          <div class="relative">
+            <input type="password" id="password" name="password" required
+                   placeholder="Enter your password"
+                   class="w-full px-4 py-2.5 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                          text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                          focus:border-transparent transition" />
+            <button type="button" id="togglePassword"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-700 transition"
+                    title="Show / hide password">
+              <!-- Eye open -->
+              <svg id="eyeOpen" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <!-- Eye slash -->
+              <svg id="eyeSlash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl
+                       transition-colors duration-150 text-sm tracking-wide shadow-sm">
+          Sign In
+        </button>
+
+      </form>
+    </div>
+
+    <!-- Visitor registration CTA -->
+    <div class="mt-5 flex flex-col items-center gap-3">
+      <div class="flex items-center gap-3 w-full">
+        <hr class="flex-1 border-slate-200" />
+        <span class="text-xs text-slate-400 font-medium whitespace-nowrap">Not a staff member?</span>
+        <hr class="flex-1 border-slate-200" />
+      </div>
+      <a href="{{ url_for('public_page') }}"
+         class="w-full flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100
+                border border-indigo-200 text-indigo-700 font-semibold text-sm py-3 rounded-xl
+                transition-colors duration-150 shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
+        </svg>
+        Register as a Public Visitor
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const btn      = document.getElementById("togglePassword");
+    const input    = document.getElementById("password");
+    const eyeOpen  = document.getElementById("eyeOpen");
+    const eyeSlash = document.getElementById("eyeSlash");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      const showing = input.type === "text";
+      input.type    = showing ? "password" : "text";
+      eyeOpen.classList.toggle("hidden",  !showing);
+      eyeSlash.classList.toggle("hidden",  showing);
+    });
+  })();
+</script>
+{% endblock %}

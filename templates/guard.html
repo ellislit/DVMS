@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Guard Console{% endblock %}
+
+{% block extra_head %}
+  <!-- html5-qrcode library for live camera scanning -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Guard Console</h1>
+  <p class="text-slate-500 text-sm mt-1">
+    Officer: <span class="font-semibold text-slate-700">{{ current_user.name }}</span> ·
+    <span id="liveClock" class="font-mono text-indigo-600"></span>
+  </p>
+</div>
+
+<!-- ═══════════ TAB NAVIGATION ═══════════ -->
+<div class="flex gap-3 mb-6">
+  <button data-guard-tab="scan"
+          class="flex-1 sm:flex-none px-6 py-3 rounded-2xl text-base font-bold border-2 transition">
+    📷 Scan Pass
+  </button>
+  <button data-guard-tab="walkin"
+          class="flex-1 sm:flex-none px-6 py-3 rounded-2xl text-base font-bold border-2 transition">
+    🚶 Walk-In Registry
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PANEL 1 — QR SCANNER
+═══════════════════════════════════════════ -->
+<div data-guard-panel="scan">
+
+  <!-- Hidden direction value -->
+  <input type="hidden" id="scanDirection" value="ENTRY" />
+
+  <!-- DIRECTION TOGGLE — oversized for outdoor use -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5">
+    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center mb-4">Scan Direction</p>
+    <div class="grid grid-cols-2 gap-4">
+      <button id="dirEntry"
+              class="h-20 rounded-2xl text-xl font-black border-2 transition-all duration-200 shadow-sm">
+        ⬇️ IN / ENTRY
+      </button>
+      <button id="dirExit"
+              class="h-20 rounded-2xl text-xl font-black border-2 transition-all duration-200 shadow-sm">
+        ⬆️ OUT / EXIT
+      </button>
+    </div>
+  </div>
+
+  <!-- SCAN RESULT BOX — massive, high-contrast -->
+  <div id="scanResultBox"
+       class="hidden bg-white rounded-2xl border-4 shadow-sm p-6 mb-5 text-center transition-all">
+    <div id="scanIcon" class="text-5xl mb-2"></div>
+    <div id="scanHeading" class="text-4xl font-black tracking-wide"></div>
+    <div id="scanDetail" class="text-lg font-semibold mt-1"></div>
+    <div id="scanHolder" class="text-base mt-1"></div>
+  </div>
+
+  <!-- CAMERA QR READER -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5">
+    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Live Camera Scanner</p>
+
+    <!-- Camera viewport -->
+    <div id="qr-reader" class="w-full max-w-sm mx-auto rounded-xl overflow-hidden bg-slate-100 min-h-[12rem] flex items-center justify-center">
+      <p class="text-slate-400 text-sm font-medium px-4 text-center">Press Start Camera to activate</p>
+    </div>
+
+    <div class="flex gap-3 mt-4 max-w-sm mx-auto">
+      <button id="startScanBtn"
+              class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl
+                     text-sm transition shadow-sm">
+        ▶ Start Camera
+      </button>
+      <button id="stopScanBtn"
+              class="hidden flex-1 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 rounded-xl
+                     text-sm transition shadow-sm">
+        ■ Stop Camera
+      </button>
+    </div>
+  </div>
+
+  <!-- MANUAL FALLBACK INPUT -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Manual Token Entry (Fallback)</p>
+    <div class="flex gap-3 max-w-md">
+      <input type="text" id="manualToken" placeholder="Paste or type QR token…"
+             class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50
+                    text-slate-900 text-sm font-mono placeholder-slate-400
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
+      <button id="manualScanBtn"
+              class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl
+                     text-sm transition shadow-sm whitespace-nowrap">
+        Validate
+      </button>
+    </div>
+    <p class="text-xs text-slate-400 mt-2">Press Enter or click Validate to check the token against the database.</p>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PANEL 2 — WALK-IN REGISTRY
+═══════════════════════════════════════════ -->
+<div data-guard-panel="walkin" class="hidden">
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-xl">
+
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
+        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-base font-bold text-slate-800">Walk-In Clearance</h2>
+        <p class="text-xs text-slate-500">Blacklist is checked automatically. Entry is logged on submission.</p>
+      </div>
+    </div>
+
+    <!-- Result message -->
+    <div id="walkInMsg" class="hidden mb-5 p-4 rounded-xl border text-sm font-medium"></div>
+
+    <form id="walkInForm" novalidate class="space-y-4">
+
+      <!-- Name + National ID -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="wi_name">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="wi_name" name="wi_name" required
+                 placeholder="Visitor's full name"
+                 class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="wi_national_id">
+            National ID <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="wi_national_id" name="wi_national_id" required
+                 placeholder="e.g. GHA-123456789"
+                 class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+      </div>
+
+      <!-- Vehicle Reg (optional) -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="wi_vehicle_reg">
+          Vehicle Registration
+          <span class="text-xs font-normal text-slate-400 ml-1">(Optional)</span>
+        </label>
+        <input type="text" id="wi_vehicle_reg" name="wi_vehicle_reg"
+               placeholder="e.g. GR-1234-24"
+               class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-900
+                      text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                      focus:border-transparent transition" />
+      </div>
+
+      <!-- Department -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="wi_department">
+          Target Department <span class="text-red-500">*</span>
+        </label>
+        <select id="wi_department" name="wi_department" required
+                class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-900
+                       text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+          <option value="" disabled selected>Select department…</option>
+          {% for dept in departments %}
+            <option value="{{ dept }}">{{ dept }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Purpose -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="wi_purpose">
+          Purpose of Visit <span class="text-red-500">*</span>
+        </label>
+        <textarea id="wi_purpose" name="wi_purpose" required rows="2"
+                  placeholder="Brief purpose of visit…"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-900
+                         text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                         focus:border-transparent transition resize-none"></textarea>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit"
+              class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl
+                     transition text-base shadow-sm tracking-wide">
+        ✅ Clear &amp; Log Entry
+      </button>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Live clock
+  function updateClock() {
+    const el = document.getElementById("liveClock");
+    if (el) el.textContent = new Date().toLocaleTimeString();
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+{% endblock %}

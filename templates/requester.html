@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}My Gate Passes{% endblock %}
+
+{% block content %}
+
+<!-- QR Code Modal -->
+<div id="qrModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative">
+    <button id="qrModalClose" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+    <h2 id="qrModalTitle" class="text-base font-bold text-slate-800 mb-4 text-center">Gate Pass QR Code</h2>
+    <div class="flex items-center justify-center bg-slate-50 rounded-xl p-4 border border-slate-200">
+      <img id="qrImage" src="" alt="QR Code" class="w-52 h-52 object-contain" />
+    </div>
+    <p class="text-xs text-slate-500 text-center mt-3">Present this QR code to the guard for scanning.</p>
+    <button onclick="window.print()"
+            class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl transition">
+      Print / Save QR
+    </button>
+    <a id="whatsappShareBtn" href="#" target="_blank" rel="noopener noreferrer"
+       class="hidden mt-2 w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold text-sm py-2.5 rounded-xl transition">
+      <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+      Share via WhatsApp
+    </a>
+  </div>
+</div>
+
+<!-- Page header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">My Gate Passes</h1>
+    <p class="text-slate-500 text-sm mt-1">Welcome, {{ user.name }} · {{ user.role | capitalize }}</p>
+  </div>
+  <button onclick="document.getElementById('requestFormCard').scrollIntoView({behavior:'smooth'})"
+          class="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold
+                 text-sm px-5 py-2.5 rounded-xl transition shadow-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+    </svg>
+    New Request
+  </button>
+</div>
+
+<!-- ═══════════ ACTIVE PASSES ═══════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+    <h2 class="text-base font-bold text-slate-800">Active Passes</h2>
+    <span class="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+      {{ active_passes | length }}
+    </span>
+  </div>
+
+  {% if active_passes %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {% for pass in active_passes %}
+        <div class="bg-white rounded-2xl border border-green-200 shadow-sm p-5 hover:shadow-md transition">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pass #{{ pass.id }}</p>
+              <p class="font-bold text-slate-800 text-sm mt-0.5">{{ pass.destination }}</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">ACTIVE</span>
+          </div>
+          <div class="space-y-1.5 text-xs text-slate-500 mb-4">
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
+              </svg>
+              {{ pass.visit_date.strftime('%A, %d %b %Y') }}
+            </div>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ pass.time_window }}
+            </div>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
+              </svg>
+              {{ pass.reason | truncate(60) }}
+            </div>
+          </div>
+          {% if pass.qr_token %}
+            <button data-qr-open="{{ pass.id }}"
+                    data-qr-src="{{ qr_map.get(pass.id, '') }}"
+                    data-qr-token="{{ pass.qr_token }}"
+                    data-visitor-name="{{ pass.visitor_name }}"
+                    data-visitor-phone="{{ pass.visitor_phone }}"
+                    data-visit-date="{{ pass.visit_date.strftime('%d %b %Y') }}"
+                    class="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700
+                           text-white font-semibold text-xs py-2.5 rounded-xl transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/>
+              </svg>
+              Show QR Code
+            </button>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z"/>
+        </svg>
+      </div>
+      <p class="text-sm font-semibold text-slate-500">No active passes</p>
+      <p class="text-xs text-slate-400 mt-1">Approved passes for today or future dates will appear here.</p>
+    </div>
+  {% endif %}
+</section>
+
+<!-- ═══════════ PENDING REQUESTS ═══════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+    <h2 class="text-base font-bold text-slate-800">Pending Requests</h2>
+    <span class="ml-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+      {{ pending_passes | length }}
+    </span>
+  </div>
+
+  {% if pending_passes %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Destination</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Date</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Time Window</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Submitted</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for pass in pending_passes %}
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-medium text-slate-800">{{ pass.destination }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ pass.visit_date.strftime('%d %b %Y') }}</td>
+              <td class="px-4 py-3 text-slate-500 text-xs font-mono">{{ pass.time_window }}</td>
+              <td class="px-4 py-3 text-slate-400 text-xs">{{ pass.created_at.strftime('%d %b %Y %H:%M') }}</td>
+              <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Pending</span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+      <p class="text-sm text-slate-500">No pending requests.</p>
+    </div>
+  {% endif %}
+</section>
+
+<!-- ═══════════ HISTORY / EXPIRED ═══════════ -->
+<section class="mb-10">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+    <h2 class="text-base font-bold text-slate-800">History</h2>
+    <span class="ml-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+      {{ expired_passes | length }}
+    </span>
+  </div>
+
+  {% if expired_passes %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Destination</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Date</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Comments</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for pass in expired_passes %}
+            <tr class="hover:bg-slate-50 transition opacity-75">
+              <td class="px-5 py-3 text-slate-600">{{ pass.destination }}</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">{{ pass.visit_date.strftime('%d %b %Y') }}</td>
+              <td class="px-4 py-3">
+                {% if pass.status == 'Rejected' %}
+                  <span class="px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">Rejected</span>
+                {% else %}
+                  <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">Expired</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-400 italic">{{ pass.comments or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+      <p class="text-sm text-slate-500">No historical records yet.</p>
+    </div>
+  {% endif %}
+</section>
+
+<!-- ═══════════ NEW REQUEST FORM ═══════════ -->
+<div id="requestFormCard" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+  <h2 class="text-base font-bold text-slate-800 mb-1">Request a New Pass</h2>
+  <p class="text-sm text-slate-500 mb-6">All requests are reviewed by the security administrator before approval.</p>
+
+  <!-- Feedback message -->
+  <div id="passRequestMsg" class="hidden mb-5 p-4 rounded-xl border text-sm font-medium"></div>
+
+  <form id="passRequestForm" novalidate class="space-y-5">
+
+    <!-- Visitor Details -->
+    <div class="pb-5 border-b border-slate-100">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Visitor Details</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visitor_name">
+            Visitor Full Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="visitor_name" name="visitor_name" required
+                 placeholder="e.g. Jane Mensah"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visitor_national_id">
+            Visitor National ID <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="visitor_national_id" name="visitor_national_id" required
+                 placeholder="e.g. GHA-123456789"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visitor_phone">
+            Visitor Phone <span class="text-red-500">*</span>
+          </label>
+          <input type="tel" id="visitor_phone" name="visitor_phone" required
+                 value="+254 "
+                 placeholder="+254 7XX XXX XXX"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visitor_email">
+            Visitor Email <span class="text-red-500">*</span>
+          </label>
+          <input type="email" id="visitor_email" name="visitor_email" required
+                 placeholder="visitor@example.com"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visitor_vehicle_reg">
+            Vehicle Registration
+            <span class="text-xs font-normal text-slate-400 ml-1">(Optional)</span>
+          </label>
+          <input type="text" id="visitor_vehicle_reg" name="visitor_vehicle_reg"
+                 placeholder="e.g. GR-1234-24"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Destination + Date -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="destination">
+          Destination <span class="text-red-500">*</span>
+        </label>
+        <select id="destination" name="destination" required
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                       text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+          <option value="" disabled selected>Select destination…</option>
+          {% for dept in departments %}
+            <option value="{{ dept }}">{{ dept }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visit_date">
+          Date of Movement <span class="text-red-500">*</span>
+        </label>
+        <input type="date" id="visit_date" name="visit_date" required
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                      text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
+      </div>
+    </div>
+
+    <!-- Time Window -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="time_window">
+        Time Window <span class="text-red-500">*</span>
+      </label>
+      <input type="text" id="time_window" name="time_window" required
+             placeholder="e.g. 09:00 - 18:00"
+             class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                    text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                    focus:border-transparent transition" />
+    </div>
+
+    <!-- Reason -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="reason">
+        Reason for Trip <span class="text-red-500">*</span>
+      </label>
+      <textarea id="reason" name="reason" required rows="3"
+                placeholder="Provide a brief but specific justification…"
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                       text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                       focus:border-transparent transition resize-none"></textarea>
+    </div>
+
+    <button type="submit"
+            class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl
+                   transition-colors text-sm tracking-wide shadow-sm">
+      Request Pass
+    </button>
+  </form>
+</div>
+
+{% endblock %}

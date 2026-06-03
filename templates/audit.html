@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Security Audit Log{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Security Audit Log</h1>
+    <p class="text-slate-500 text-sm mt-1">Chronological, immutable record of every gate event</p>
+  </div>
+  <div class="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+    </svg>
+    Read-only · Tamper-evident log
+  </div>
+</div>
+
+<!-- ═══════════ FILTER BAR ═══════════ -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-6">
+  <form method="GET" action="{{ url_for('audit_page') }}" class="flex flex-wrap gap-4 items-end">
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1" for="scan_type_filter">Scan Type</label>
+      <select id="scan_type_filter" name="scan_type"
+              class="audit-filter-select px-3 py-2 rounded-xl border border-slate-200 bg-slate-50
+                     text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+        <option value="" {% if not scan_type_filter %}selected{% endif %}>All Types</option>
+        <option value="ENTRY"   {% if scan_type_filter == 'ENTRY' %}selected{% endif %}>ENTRY</option>
+        <option value="EXIT"    {% if scan_type_filter == 'EXIT' %}selected{% endif %}>EXIT</option>
+        <option value="WALK-IN" {% if scan_type_filter == 'WALK-IN' %}selected{% endif %}>WALK-IN</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1" for="result_filter">Result</label>
+      <select id="result_filter" name="result"
+              class="audit-filter-select px-3 py-2 rounded-xl border border-slate-200 bg-slate-50
+                     text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+        <option value="" {% if not result_filter %}selected{% endif %}>All Results</option>
+        <option value="VALID"   {% if result_filter == 'VALID' %}selected{% endif %}>VALID</option>
+        <option value="INVALID" {% if result_filter == 'INVALID' %}selected{% endif %}>INVALID</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1" for="date_filter">Date</label>
+      <input type="date" id="date_filter" name="date" value="{{ date_filter }}"
+             class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50
+                    text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
+    </div>
+    <div class="flex gap-2">
+      <button type="submit"
+              class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2 rounded-xl transition">
+        Filter
+      </button>
+      <a href="{{ url_for('audit_page') }}"
+         class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold px-4 py-2 rounded-xl transition">
+        Clear
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- ═══════════ LOG TABLE ═══════════ -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+  {% if logs %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Timestamp</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Pass Token</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Pass Kind</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Guard</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Result</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for log in logs %}
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 text-xs text-slate-400 font-mono">{{ log.id }}</td>
+              <td class="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">
+                <span class="block font-semibold">{{ log.scanned_at.strftime('%d %b %Y') }}</span>
+                <span class="text-slate-400">{{ log.scanned_at.strftime('%H:%M:%S') }}</span>
+              </td>
+              <td class="px-4 py-3">
+                {% if log.scan_type == 'ENTRY' %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-xs font-bold">
+                    ⬇ ENTRY
+                  </span>
+                {% elif log.scan_type == 'EXIT' %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
+                    ⬆ EXIT
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
+                    🚶 WALK-IN
+                  </span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-xs font-mono text-slate-500">
+                {{ log.qr_token[:16] }}{% if log.qr_token | length > 16 %}…{% endif %}
+              </td>
+              <td class="px-4 py-3">
+                {% if log.pass_type == 'internal' %}
+                  <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold capitalize">Internal</span>
+                {% elif log.pass_type == 'visitor' %}
+                  <span class="px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 text-xs font-semibold capitalize">Visitor</span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold capitalize">{{ log.pass_type }}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-600">
+                {% if log.guard %}
+                  {{ log.guard.name }}
+                {% else %}
+                  <span class="text-slate-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                {% if log.result == 'VALID' %}
+                  <span class="px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-xs font-bold">✓ VALID</span>
+                {% elif log.result == 'BLACKLISTED' %}
+                  <span class="px-2.5 py-1 rounded-full bg-red-200 text-red-900 text-xs font-bold">⛔ BLACKLISTED</span>
+                {% else %}
+                  <span class="px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">✗ INVALID</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-400 italic max-w-[10rem]">
+                <span title="{{ log.note or '' }}">{{ (log.note or '—') | truncate(40) }}</span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Pagination ── -->
+    {% if pagination.pages > 1 %}
+      <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-between">
+        <p class="text-xs text-slate-500">
+          Showing {{ ((pagination.page - 1) * 25) + 1 }}–{{ [pagination.page * 25, pagination.total] | min }}
+          of {{ pagination.total }} entries
+        </p>
+        <div class="flex items-center gap-1">
+          {% if pagination.has_prev %}
+            <a href="{{ url_for('audit_page', page=pagination.prev_num, scan_type=scan_type_filter, result=result_filter, date=date_filter) }}"
+               class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+              ← Prev
+            </a>
+          {% endif %}
+
+          {% for page_num in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+            {% if page_num %}
+              <a href="{{ url_for('audit_page', page=page_num, scan_type=scan_type_filter, result=result_filter, date=date_filter) }}"
+                 class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
+                        {% if page_num == pagination.page %}
+                          bg-slate-900 text-white
+                        {% else %}
+                          bg-slate-100 hover:bg-slate-200 text-slate-700
+                        {% endif %}">
+                {{ page_num }}
+              </a>
+            {% else %}
+              <span class="px-2 text-slate-400 text-xs">…</span>
+            {% endif %}
+          {% endfor %}
+
+          {% if pagination.has_next %}
+            <a href="{{ url_for('audit_page', page=pagination.next_num, scan_type=scan_type_filter, result=result_filter, date=date_filter) }}"
+               class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+              Next →
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+  {% else %}
+    <!-- Empty state -->
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+        </svg>
+      </div>
+      <p class="text-base font-bold text-slate-500">No audit records found</p>
+      <p class="text-sm text-slate-400 mt-1">
+        {% if scan_type_filter or result_filter or date_filter %}
+          No events match your current filters. <a href="{{ url_for('audit_page') }}" class="text-indigo-600 hover:underline">Clear filters</a>
+        {% else %}
+          Gate scan events will appear here once the guard console is used.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

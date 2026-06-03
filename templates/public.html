@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Visitor Self-Registration{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <!-- Page header -->
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 shadow-lg mb-4">
+      <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold text-slate-900">Visitor Pass Request</h1>
+    <p class="text-slate-500 text-sm mt-1">Complete all fields to request access to campus. Your application will be reviewed by security administration.</p>
+  </div>
+
+  <!-- Notice banner -->
+  <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-sm text-amber-800">
+    <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+    </svg>
+    <span>All visitors are subject to identity verification and blacklist screening. Providing false information may result in denial of access and further action.</span>
+  </div>
+
+  <!-- Registration Card -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+
+    <!-- Result message (hidden by default) -->
+    <div id="visitorMsg" class="hidden mb-5 p-4 rounded-xl border text-sm font-medium"></div>
+
+    <form id="visitorForm" novalidate class="space-y-5">
+
+      <!-- Row 1: Name + National ID -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="name">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="name" name="name" required
+                 placeholder="e.g. Jane Akosua Mensah"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="national_id">
+            National ID / Passport No. <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="national_id" name="national_id" required
+                 placeholder="e.g. GHA-123456789"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+      </div>
+
+      <!-- Row 2: Phone + Email -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="phone">
+            Phone Number <span class="text-red-500">*</span>
+          </label>
+          <input type="tel" id="phone" name="phone" required
+                 value="+254 "
+                 placeholder="+233 24 000 0000"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="email">
+            Email Address <span class="text-red-500">*</span>
+          </label>
+          <input type="email" id="email" name="email" required
+                 placeholder="you@example.com"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+      </div>
+
+      <!-- Row 3: Date + Vehicle Reg -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="visit_date">
+            Date of Visit <span class="text-red-500">*</span>
+          </label>
+          <input type="date" id="visit_date" name="visit_date" required
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="vehicle_reg">
+            Vehicle Registration
+            <span class="text-xs font-normal text-slate-400 ml-1">(Optional)</span>
+          </label>
+          <input type="text" id="vehicle_reg" name="vehicle_reg"
+                 placeholder="e.g. GR-1234-24"
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                        text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:border-transparent transition" />
+        </div>
+      </div>
+
+      <!-- Row 4: Department -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="department">
+          Target Department <span class="text-red-500">*</span>
+        </label>
+        <select id="department" name="department" required
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                       text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500
+                       focus:border-transparent transition">
+          <option value="" disabled selected>Select a department…</option>
+          {% for dept in departments %}
+            <option value="{{ dept }}">{{ dept }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Row 5: Purpose -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="purpose">
+          Purpose of Visit <span class="text-red-500">*</span>
+        </label>
+        <textarea id="purpose" name="purpose" required rows="3"
+                  placeholder="Briefly describe the purpose of your visit…"
+                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                         text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                         focus:border-transparent transition resize-none"></textarea>
+      </div>
+
+      <!-- Submit -->
+      <div class="pt-2">
+        <button type="submit"
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl
+                       transition-colors duration-150 text-sm tracking-wide shadow-sm">
+          Submit Request
+        </button>
+        <p class="text-xs text-slate-400 text-center mt-3">
+          Your data is processed solely for campus security purposes.
+        </p>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Already registered note -->
+  <div class="mt-6 text-center text-sm text-slate-500">
+    Are you a staff member or student?
+    <a href="{{ url_for('auth_page') }}" class="text-indigo-600 hover:underline font-medium ml-1">Login to your account →</a>
+  </div>
+
+</div>
+{% endblock %}

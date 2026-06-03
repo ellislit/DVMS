@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DVMS{% endblock %} — DVMS</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: "#0B1120", light: "#1E293B" }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- html5-qrcode library (used only on guard page) -->
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {% block extra_head %}{% endblock %}
+
+  <style>
+    [x-cloak] { display: none; }
+    .nav-link { color: rgb(203 213 225); font-size: .875rem; font-weight: 500; padding: .5rem .75rem; border-radius: .5rem; transition: color 150ms, background-color 150ms; }
+    .nav-link:hover { color: #fff; background-color: rgb(30 41 59); }
+    .nav-link.active { color: #fff; background-color: rgb(30 41 59); }
+  </style>
+</head>
+
+<body class="h-full bg-slate-50 text-slate-900 antialiased">
+
+  <!-- ═══════════════════════════════════════════════════ TOP NAVIGATION -->
+  <header class="bg-slate-950 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+
+        <!-- Brand -->
+        <a href="{{ url_for('index') }}" class="flex items-center gap-3 group">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-inner">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5"
+                 viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
+                 d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
+          </div>
+          <div>
+            <p class="text-white font-bold text-base leading-none tracking-tight">DVMS</p>
+            <p class="text-slate-400 text-xs leading-none mt-0.5">Digital Visitor Management System</p>
+          </div>
+        </a>
+
+        <!-- Desktop nav -->
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="{{ url_for('index') }}"
+             class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+          <a href="{{ url_for('public_page') }}"
+             class="nav-link {% if request.endpoint == 'public_page' %}active{% endif %}">Visitor Portal</a>
+          {% if is_authenticated %}
+            {% if current_user.role == 'internal' %}
+              <a href="{{ url_for('requester_page') }}"
+                 class="nav-link {% if request.endpoint == 'requester_page' %}active{% endif %}">My Passes</a>
+            {% endif %}
+            {% if current_user.role == 'admin' %}
+              <a href="{{ url_for('admin_page') }}"
+                 class="nav-link {% if request.endpoint == 'admin_page' %}active{% endif %}">Admin Desk</a>
+            {% endif %}
+            {% if current_user.role == 'guard' %}
+              <a href="{{ url_for('guard_page') }}"
+                 class="nav-link {% if request.endpoint == 'guard_page' %}active{% endif %}">Guard Console</a>
+            {% endif %}
+            <a href="{{ url_for('audit_page') }}"
+               class="nav-link {% if request.endpoint == 'audit_page' %}active{% endif %}">Audit Log</a>
+          {% endif %}
+        </nav>
+
+        <!-- Auth area -->
+        <div class="flex items-center gap-3">
+          {% if is_authenticated %}
+            <div class="hidden sm:flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-1.5">
+              <div class="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center">
+                <span class="text-white text-xs font-bold">{{ current_user.name[0] }}</span>
+              </div>
+              <div>
+                <p class="text-white text-xs font-semibold leading-none">{{ current_user.name }}</p>
+                <p class="text-slate-400 text-xs capitalize leading-none mt-0.5">{{ current_user.role }}</p>
+              </div>
+            </div>
+            <a href="{{ url_for('logout') }}"
+               class="text-slate-400 hover:text-red-400 text-sm font-medium transition-colors px-2 py-1 rounded-lg">
+              Logout
+            </a>
+          {% else %}
+            <a href="{{ url_for('auth_page') }}"
+               class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
+              Staff Login
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════ FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        {% for category, message in messages %}
+          {% set colors = {
+            'success': 'bg-green-50 border-green-400 text-green-800',
+            'danger':  'bg-red-50 border-red-400 text-red-800',
+            'warning': 'bg-yellow-50 border-yellow-400 text-yellow-800',
+            'info':    'bg-blue-50 border-blue-400 text-blue-800'
+          } %}
+          <div class="flex items-center gap-3 p-4 rounded-xl border {{ colors.get(category, colors['info']) }} mb-2 text-sm font-medium shadow-sm">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ═══════════════════════════════════════════════════ PAGE CONTENT -->
+  <main class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════ FOOTER -->
+  <footer class="border-t border-slate-200 mt-12 py-6">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p class="text-slate-400 text-xs">© {{ now_year }} DVMS — Digital Visitor Management System</p>
+      <p class="text-slate-400 text-xs">Computer Science Final-Year Project</p>
+    </div>
+  </footer>
+
+  <!-- Main JS -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
