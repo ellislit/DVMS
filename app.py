@@ -708,7 +708,13 @@ def api_admin_approve():
         v_name = record.name
 
     if v_email:
-        send_gatepass_email(v_email, v_name, token, record.visit_date)
+        # Run email dispatch in a background thread to prevent UI freezing
+        email_thread = threading.Thread(
+            target=send_gatepass_email,
+            args=(v_email, v_name, token, record.visit_date)
+        )
+        email_thread.daemon = True
+        email_thread.start()
 
     return jsonify({"success": True, "qr_token": token, "message": "Pass approved and email sent."})
 
