@@ -284,16 +284,24 @@ def login_required(f):
 # ---------------------------------------------------------------------------
 
 def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
-    """Send a professional gate pass confirmation email via Gmail SMTP SSL."""
-    username = os.environ.get("MAIL_USERNAME")
-    password = os.environ.get("MAIL_PASSWORD")
-    if not username or not password:
-        logger.warning("MAIL_USERNAME/MAIL_PASSWORD not configured — email skipped.")
+    """Send a professional gate pass confirmation email via Brevo HTTP API."""
+    import urllib.request
+    import json
+    import base64
+    import os
+    import qrcode
+    import io
+
+    api_key = os.environ.get("BREVO_API_KEY")
+    sender_email = os.environ.get("MAIL_USERNAME")
+
+    if not api_key or not sender_email:
+        logger.warning("BREVO_API_KEY or MAIL_USERNAME not configured — email skipped.")
         return
 
     visit_str = (
         visit_date.strftime("%A, %d %B %Y")
-        if isinstance(visit_date, date)
+        if hasattr(visit_date, "strftime")
         else str(visit_date)
     )
 
@@ -304,75 +312,52 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
     img = qr.make_image(fill_color="black", back_color="white")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    img_data = buf.getvalue()
+    img_b64 = base64.b64encode(buf.getvalue()).decode()
 
     html_body = f"""<!DOCTYPE html>
-<html><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-      <tr>
-        <td style="background:#0f172a;padding:24px 32px;border-radius:16px 16px 0 0;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Kabarak University</h1>
-          <p style="margin:4px 0 0;color:#94a3b8;font-size:13px;">Gate Pass Management System</p>
-        </td>
-      </tr>
-      <tr>
-        <td style="background:#ffffff;padding:32px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 16px 16px;">
-          <p style="color:#1e293b;font-size:15px;">Dear <strong>{visitor_name}</strong>,</p>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">
-            Your gate pass request has been <strong>successfully received</strong> and is
-            pending administrator approval. You will be notified once it is cleared.
-          </p>
-          <table width="100%" cellpadding="0" cellspacing="0"
-                 style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin:24px 0;">
-            <tr>
-              <td style="padding:20px 24px;text-align:center;">
-                <p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:.1em;
-                           text-transform:uppercase;color:#64748b;">Gate Pass QR Code</p>
-                <img src="cid:qr_image" alt="Gate Pass QR Code" style="display:block; margin: 0 auto; width: 200px; height: 200px; border-radius: 8px;">
-                <p style="margin:12px 0 0;font-size:12px;color:#64748b;">Scan this code at the gate</p>
-              </td>
-            </tr>
-          </table>
-          <p style="color:#475569;font-size:14px;"><strong>&#128197; Visit Date:</strong>&nbsp;{visit_str}</p>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">
-            <strong>&#128205; Arrival Instructions:</strong><br>
-            Present this reference token (or your approved QR code) to the security officer
-            at the <strong>main campus gate</strong>. Ensure you arrive within the approved
-            time window. A valid photo ID may be requested for verification.
-          </p>
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
-          <p style="color:#94a3b8;font-size:12px;">
-            This is an automated message from the Kabarak University Gate Pass System.
-            Please do not reply to this email.
-          </p>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>"""
+    <html><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;padding:32px;border-radius:8px;border:1px solid #e2e8f0;margin-top:32px;">
+      <h2 style="color:#0f172a;margin-top:0;">Kabarak University Gate Pass</h2>
+      <p style="color:#475569;font-size:15px;">Dear <strong>{visitor_name}</strong>,</p>
+      <p style="color:#475569;font-size:15px;">Your gate pass request for <strong>{visit_str}</strong> has been approved.</p>
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Gate Pass Request Received — {visit_str}"
-    msg["From"]    = f"Kabarak University Security <{username}>"
-    msg["To"]      = visitor_email
-    msg.attach(MIMEText(html_body, "html"))
+      <div style="background:#f8fafc;padding:24px;border-radius:8px;text-align:center;border:1px solid #e2e8f0;margin:24px 0;">
+        <p style="font-weight:bold;color:#1e293b;margin-bottom:16px;">Gate Pass QR Code</p>
+        <img src="data:image/png;base64,{img_b64}" alt="QR Code" style="width:200px;height:200px;" />
+        <p style="font-size:13px;color:#64748b;margin-top:16px;">
+          * A high-quality copy of this QR code is also attached to this email.
+        </p>
+      </div>
 
-    # Attach QR code image with Content-ID
-    qr_image = MIMEImage(img_data)
-    qr_image.add_header("Content-ID", "<qr_image>")
-    msg.attach(qr_image)
+      <p style="color:#475569;font-size:14px;">Present this QR code to the security officer at the main campus gate upon arrival.</p>
+    </div>
+    </body></html>"""
 
-    context = ssl.create_default_context()
+    # Build the Brevo API JSON payload
+    payload = {
+        "sender": {"name": "Kabarak University Security", "email": sender_email},
+        "to": [{"email": visitor_email, "name": visitor_name}],
+        "subject": f"Gate Pass Approved — {visit_str}",
+        "htmlContent": html_body,
+        "attachment": [{"content": img_b64, "name": "GatePass_QRCode.png"}]
+    }
+
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "api-key": api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        method="POST"
+    )
+
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(username, password)
-            server.sendmail(username, visitor_email, msg.as_string())
-        logger.info("Gate pass email sent to %s", visitor_email)
+        with urllib.request.urlopen(req) as response:
+            logger.info("Email sent via API to %s. Status: %s", visitor_email, response.status)
     except Exception as exc:
-        logger.error("Failed to send gate pass email to %s: %s", visitor_email, exc)
+        logger.error("Failed to send email via API to %s: %s", visitor_email, exc)
 
 
 # ---------------------------------------------------------------------------
