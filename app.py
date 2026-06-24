@@ -25,7 +25,7 @@ import qrcode
 import base64
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    session, jsonify, abort
+    session, jsonify, abort, send_file
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -380,6 +380,19 @@ def generate_qr_base64(token: str) -> str:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+@app.route("/pass/<qr_token>/qr")
+def pass_qr_image(qr_token):
+    """Generate and serve a QR code PNG for the given pass token (in-memory, no disk write)."""
+    qr = qrcode.QRCode(version=1, box_size=8, border=2)
+    qr.add_data(qr_token)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
 
 
 # ---------------------------------------------------------------------------
