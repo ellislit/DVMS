@@ -327,9 +327,16 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
         <p style="font-size:13px;color:#64748b;margin-top:16px;">
           * A high-quality copy of this QR code is also attached to this email.
         </p>
+        <p style="font-weight:bold;color:#1e293b;margin:24px 0 8px;">Gate Pass Token</p>
+        <p style="font-family:Consolas,Monaco,monospace;font-size:14px;color:#0f172a;background:#ffffff;
+                  border:1px dashed #cbd5e1;border-radius:6px;padding:12px 16px;word-break:break-all;
+                  letter-spacing:0.5px;margin:0;">{qr_token}</p>
+        <p style="font-size:12px;color:#64748b;margin-top:12px;">
+          If scanning fails, give this token to security for manual entry at the gate.
+        </p>
       </div>
 
-      <p style="color:#475569;font-size:14px;">Present this QR code to the security officer at the main campus gate upon arrival.</p>
+      <p style="color:#475569;font-size:14px;">Present this QR code or token to the security officer at the main campus gate upon arrival.</p>
     </div>
     </body></html>"""
 
