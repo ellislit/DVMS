@@ -168,6 +168,8 @@ async function postJSON(url, body) {
         showMessage("passRequestMsg", data.message, "success");
         form.reset();
         setTimeout(() => window.location.reload(), 4000);
+      } else if (data.blacklisted) {
+        showMessage("passRequestMsg", "ACCESS DENIED: " + data.message, "error");
       } else {
         showMessage("passRequestMsg", data.message || "Submission failed.", "error");
       }
@@ -326,7 +328,7 @@ async function postJSON(url, body) {
         if (ok) {
           window.location.reload();
         } else {
-          alert(data.message || "Approval failed.");
+          alert(data.blacklisted ? "BLACKLISTED: " + data.message : (data.message || "Approval failed."));
           btn.disabled = false;
         }
       } catch {
@@ -387,7 +389,11 @@ async function postJSON(url, body) {
         ids, pass_type: "internal",
       });
       if (ok) {
-        alert(`${data.approved} pass(es) approved.`);
+        let msg = `${data.approved} pass(es) approved.`;
+        if (data.skipped_blacklisted) {
+          msg += ` ${data.skipped_blacklisted} skipped (blacklisted).`;
+        }
+        alert(msg);
         window.location.reload();
       } else {
         alert(data.message || "Bulk approve failed.");
@@ -533,7 +539,8 @@ async function validateToken(token) {
       showScanResult(true, "ACCESS GRANTED", data.message, data.name || "");
       return true;
     } else {
-      showScanResult(false, data.result || "DENIED", data.message, "");
+      const heading = data.result === "BLACKLISTED" ? "BLACKLISTED" : (data.result || "DENIED");
+      showScanResult(false, heading, data.message, "");
       return false;
     }
   } catch {

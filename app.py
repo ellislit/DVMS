@@ -236,6 +236,32 @@ def _validate_lengths(data: dict):
     return None
 
 
+def _normalize_national_id(national_id: str) -> str:
+    """Strip whitespace and uppercase for consistent blacklist matching."""
+    return re.sub(r"\s+", "", (national_id or "").strip().upper())
+
+
+def _get_blacklist_entry(national_id: str):
+    """Return a Blacklist row if the ID matches (case/whitespace-insensitive)."""
+    normalized = _normalize_national_id(national_id)
+    if not normalized:
+        return None
+    for entry in Blacklist.query.all():
+        if _normalize_national_id(entry.national_id) == normalized:
+            return entry
+    return None
+
+
+def _pass_record_national_id(record, pass_type: str) -> str:
+    """Extract the visitor national ID from an internal or public pass record."""
+    if pass_type == "internal":
+        return record.visitor_national_id or ""
+    return record.national_id or ""
+
+
+_BLACKLIST_MSG = "Access denied. This ID is on the security blacklist."
+
+
 def sweep_expired_passes():
     """Mark approved passes as Expired once their visit date is in the past."""
     today = date.today()
@@ -646,6 +672,14 @@ def api_pass_request():
     if visit_date < date.today():
         return jsonify({"success": False, "message": "Visit date cannot be in the past."}), 400
 
+    visitor_national_id = _normalize_national_id(data["visitor_national_id"])
+    if _get_blacklist_entry(visitor_national_id):
+        return jsonify({
+            "success": False,
+            "blacklisted": True,
+            "message": _BLACKLIST_MSG,
+        }), 403
+
     user = User.query.get(session["user_id"])
     if user.role == "internal":
         requester_type = "Student" if "student" in user.login_id.lower() else "Staff"
@@ -666,7 +700,7 @@ def api_pass_request():
         time_window=data["time_window"].strip(),
         reason=data["reason"].strip(),
         visitor_name=v_name,
-        visitor_national_id=data["visitor_national_id"].strip(),
+        visitor_national_id=visitor_national_id,
         visitor_phone=v_phone,
         visitor_email=v_email,
         visitor_vehicle_reg=v_vehicle_reg,
@@ -697,6 +731,13 @@ def api_admin_approve():
     record = model.query.get(data.get("id"))
     if not record:
         return jsonify({"success": False, "message": "Record not found."}), 404
+
+    if _get_blacklist_entry(_pass_record_national_id(record, pass_type)):
+        return jsonify({
+            "success": False,
+            "blacklisted": True,
+            "message": _BLACKLIST_MSG,
+        }), 403
 
     token = uuid.uuid4().hex[:32]
     record.status = "Approved"
@@ -751,14 +792,22 @@ def api_bulk_approve():
         return jsonify({"success": False, "message": "Invalid pass_type."}), 400
     model = PassRequest if pass_type == "internal" else VisitorRequest
     approved = 0
+    skipped_blacklisted = 0
     for pid in ids:
         record = model.query.get(pid)
         if record and record.status == "Pending":
+            if _get_blacklist_entry(_pass_record_national_id(record, pass_type)):
+                skipped_blacklisted += 1
+                continue
             record.status = "Approved"
             record.qr_token = uuid.uuid4().hex[:32]
             approved += 1
     db.session.commit()
-    return jsonify({"success": True, "approved": approved})
+    return jsonify({
+        "success": True,
+        "approved": approved,
+        "skipped_blacklisted": skipped_blacklisted,
+    })
 
 
 @app.route("/api/admin/blacklist", methods=["POST"])
@@ -767,10 +816,11 @@ def api_blacklist_add():
     data = request.get_json(force=True)
     if not data.get("national_id") or not data.get("name"):
         return jsonify({"success": False, "message": "national_id and name are required."}), 400
-    if Blacklist.query.filter_by(national_id=data["national_id"].strip()).first():
+    national_id = _normalize_national_id(data["national_id"])
+    if _get_blacklist_entry(national_id):
         return jsonify({"success": False, "message": "This ID is already blacklisted."}), 409
     db.session.add(Blacklist(
-        national_id=data["national_id"].strip(),
+        national_id=national_id,
         name=data["name"].strip(),
         reason=data.get("reason", "").strip() or None,
     ))
@@ -869,11 +919,11 @@ def api_visitor_request():
         if not data.get(field):
             return jsonify({"success": False, "message": f"Field '{field}' is required."}), 400
 
-    if Blacklist.query.filter_by(national_id=data["national_id"].strip()).first():
+    if _get_blacklist_entry(data["national_id"]):
         return jsonify({
             "success": False,
             "blacklisted": True,
-            "message": "Access denied. This ID is on the security blacklist.",
+            "message": _BLACKLIST_MSG,
         }), 403
 
     len_err = _validate_lengths(data)
@@ -890,7 +940,7 @@ def api_visitor_request():
 
     visitor = VisitorRequest(
         name=data["name"].strip(),
-        national_id=data["national_id"].strip(),
+        national_id=_normalize_national_id(data["national_id"]),
         phone=data["phone"].strip(),
         email=data["email"].strip(),
         visit_date=visit_date,
@@ -946,6 +996,18 @@ def api_guard_scan():
         _log("INVALID", "Token not found in the system.")
         return jsonify({"success": False, "result": "INVALID", "message": "Token not recognised."}), 404
 
+    if scan_type == "ENTRY":
+        bl_entry = _get_blacklist_entry(_pass_record_national_id(record, pass_type))
+        if bl_entry:
+            visitor_name = record.visitor_name if pass_type == "internal" else record.name
+            _log("BLACKLISTED", f"Blacklisted individual denied entry: {visitor_name}.")
+            return jsonify({
+                "success": False,
+                "result": "BLACKLISTED",
+                "blacklisted": True,
+                "message": f"ACCESS DENIED: {bl_entry.name} is on the security blacklist.",
+            }), 403
+
     # ── State transition logic ───────────────────────────────────────────────────
     if scan_type == "ENTRY":
         if record.status == "Checked In":
@@ -999,11 +1061,11 @@ def api_guard_scan():
 def api_guard_walkin():
     data = request.get_json(force=True)
     name = (data.get("name") or "").strip()
-    national_id = (data.get("national_id") or "").strip()
+    national_id = _normalize_national_id(data.get("national_id") or "")
     if not name or not national_id:
         return jsonify({"success": False, "message": "Name and National ID are required."}), 400
 
-    if Blacklist.query.filter_by(national_id=national_id).first():
+    if _get_blacklist_entry(national_id):
         return jsonify({
             "success": False, "blacklisted": True,
             "message": "ACCESS DENIED: This individual is on the security blacklist.",
