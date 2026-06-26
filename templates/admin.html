@@ -604,8 +604,8 @@
   (function initDeptChart() {
     const ctx = document.getElementById("deptChart");
     if (!ctx) return;
-    const labels = {{ chart_labels | tojson }};
-    const data = {{ chart_data | tojson }};
+    const labels = JSON.parse('{{ chart_labels | tojson | safe }}');
+    const data = JSON.parse('{{ chart_data | tojson | safe }}');
     new Chart(ctx, {
       type: "bar",
       data: {
