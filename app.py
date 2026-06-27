@@ -263,15 +263,47 @@ _BLACKLIST_MSG = "Access denied. This ID is on the security blacklist."
 
 
 def sweep_expired_passes():
-    """Mark approved passes as Expired once their visit date is in the past."""
+    """Mark approved passes as Expired and auto-checkout ghost visitors once their visit date is in the past."""
     today = date.today()
-    for req in PassRequest.query.filter_by(status="Approved").all():
+    sweep_executed = False
+
+    # 1. Sweep Internal Host Passes (PassRequest)
+    for req in PassRequest.query.filter(PassRequest.status.in_(['Approved', 'Checked In'])).all():
         if req.visit_date < today:
-            req.status = "Expired"
-    for req in VisitorRequest.query.filter_by(status="Approved").all():
+            if req.status == 'Approved':
+                req.status = 'Expired'
+            elif req.status == 'Checked In':
+                req.status = 'Checked Out'
+                # Log the automated exit
+                db.session.add(AuditLog(
+                    scan_type='EXIT',
+                    qr_token=req.qr_token,
+                    pass_type='internal',
+                    result='VALID',
+                    note='System Auto-Sweep: Visitor did not scan out on day of visit.'
+                ))
+            sweep_executed = True
+
+    # 2. Sweep Public Visitor Passes (VisitorRequest)
+    for req in VisitorRequest.query.filter(VisitorRequest.status.in_(['Approved', 'Checked In'])).all():
         if req.visit_date < today:
-            req.status = "Expired"
-    db.session.commit()
+            if req.status == 'Approved':
+                req.status = 'Expired'
+            elif req.status == 'Checked In':
+                req.status = 'Checked Out'
+                # Log the automated exit
+                db.session.add(AuditLog(
+                    scan_type='EXIT',
+                    qr_token=req.qr_token,
+                    pass_type='visitor',
+                    result='VALID',
+                    note='System Auto-Sweep: Visitor did not scan out on day of visit.'
+                ))
+            sweep_executed = True
+
+    # Only commit to the database if changes were actually made
+    if sweep_executed:
+        db.session.commit()
 
 
 # ---------------------------------------------------------------------------
