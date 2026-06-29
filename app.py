@@ -1085,6 +1085,113 @@ def api_guard_scan():
 
 
 # ---------------------------------------------------------------------------
+# API — Guard scan by National ID (manual fallback)
+# ---------------------------------------------------------------------------
+
+@app.route("/api/guard/scan-by-id", methods=["POST"])
+@role_required("guard")
+def api_guard_scan_by_id():
+    """Manual fallback: look up today's approved/checked-in pass by visitor National ID."""
+    data = request.get_json(force=True)
+    national_id_raw = (data.get("national_id") or "").strip()
+    scan_type = (data.get("scan_type") or "ENTRY").strip().upper()
+
+    if scan_type not in VALID_SCAN_TYPES:
+        return jsonify({"success": False, "message": "Invalid scan_type."}), 400
+
+    if not national_id_raw:
+        return jsonify({"success": False, "message": "National ID is required."}), 400
+
+    national_id = _normalize_national_id(national_id_raw)
+    today = date.today()
+
+    # Determine which statuses are valid for this scan direction
+    if scan_type == "ENTRY":
+        valid_statuses = ["Approved"]
+    elif scan_type == "EXIT":
+        valid_statuses = ["Checked In"]
+    else:
+        # WALK-IN via this endpoint is not meaningful; redirect to walkin route
+        return jsonify({"success": False, "message": "Use the Walk-In form for unregistered visitors."}), 400
+
+    # Search PassRequest (internal) — visitor_national_id column
+    record = PassRequest.query.filter(
+        PassRequest.visitor_national_id == national_id,
+        PassRequest.visit_date == today,
+        PassRequest.status.in_(valid_statuses),
+    ).first()
+    pass_type = "internal"
+
+    if not record:
+        # Search VisitorRequest (public) — national_id column
+        record = VisitorRequest.query.filter(
+            VisitorRequest.national_id == national_id,
+            VisitorRequest.visit_date == today,
+            VisitorRequest.status.in_(valid_statuses),
+        ).first()
+        pass_type = "visitor"
+
+    def _log(result, note, token):
+        db.session.add(AuditLog(
+            scan_type=scan_type,
+            guard_id=session.get("user_id"),
+            qr_token=token,
+            pass_type=pass_type if record else "unknown",
+            result=result,
+            note=note,
+        ))
+        db.session.commit()
+
+    if not record:
+        db.session.add(AuditLog(
+            scan_type=scan_type,
+            guard_id=session.get("user_id"),
+            qr_token=f"NID-LOOKUP-{national_id}",
+            pass_type="unknown",
+            result="INVALID",
+            note=f"No valid pass found for National ID: {national_id} on {today}.",
+        ))
+        db.session.commit()
+        return jsonify({
+            "success": False,
+            "result": "INVALID",
+            "message": f"No valid pass found for National ID '{national_id_raw}' today.",
+        }), 404
+
+    # Blacklist check on ENTRY
+    if scan_type == "ENTRY":
+        bl_entry = _get_blacklist_entry(national_id)
+        if bl_entry:
+            visitor_name = record.visitor_name if pass_type == "internal" else record.name
+            _log("BLACKLISTED", f"Blacklisted individual denied entry: {visitor_name}.", record.qr_token)
+            return jsonify({
+                "success": False,
+                "result": "BLACKLISTED",
+                "blacklisted": True,
+                "message": f"ACCESS DENIED: {bl_entry.name} is on the security blacklist.",
+            }), 403
+
+    # State transition
+    if scan_type == "ENTRY":
+        record.status = "Checked In"
+    elif scan_type == "EXIT":
+        record.status = "Checked Out"
+    db.session.commit()
+
+    name = record.requester_name if pass_type == "internal" else record.name
+    success_msg = f"{'Entry' if scan_type == 'ENTRY' else 'Exit'} successful \u2014 {name}"
+    _log("VALID", f"{scan_type} scan (by National ID) recorded for {name}.", record.qr_token)
+
+    return jsonify({
+        "success": True,
+        "result": "VALID",
+        "message": success_msg,
+        "name": name,
+        "pass_type": pass_type,
+    })
+
+
+# ---------------------------------------------------------------------------
 # API — Guard walk-in registry
 # ---------------------------------------------------------------------------
 

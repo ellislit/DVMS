@@ -363,7 +363,7 @@ async function postJSON(url, body) {
 })();
 
 // ---------------------------------------------------------------------------
-// Admin: Bulk approve
+// Admin: Bulk approve — Internal
 // ---------------------------------------------------------------------------
 
 (function initBulkApprove() {
@@ -402,6 +402,50 @@ async function postJSON(url, body) {
       alert("Network error.");
     } finally {
       bulkBtn.disabled = false;
+    }
+  });
+})();
+
+// ---------------------------------------------------------------------------
+// Admin: Bulk approve — Visitor
+// ---------------------------------------------------------------------------
+
+(function initBulkApproveVisitor() {
+  const selectAllVisitor = document.getElementById("selectAllVisitor");
+  const bulkVisitorBtn   = document.getElementById("bulkApproveVisitorBtn");
+  if (!bulkVisitorBtn) return;
+
+  if (selectAllVisitor) {
+    selectAllVisitor.addEventListener("change", () => {
+      document.querySelectorAll(".visitor-approve-cb").forEach((cb) => {
+        cb.checked = selectAllVisitor.checked;
+      });
+    });
+  }
+
+  bulkVisitorBtn.addEventListener("click", async () => {
+    const checked = [...document.querySelectorAll(".visitor-approve-cb:checked")];
+    if (!checked.length) { alert("No visitor requests selected."); return; }
+    const ids = checked.map((cb) => parseInt(cb.value));
+    bulkVisitorBtn.disabled = true;
+    try {
+      const { ok, data } = await postJSON("/api/admin/bulk-approve", {
+        ids, pass_type: "visitor",
+      });
+      if (ok) {
+        let msg = `${data.approved} visitor pass(es) approved.`;
+        if (data.skipped_blacklisted) {
+          msg += ` ${data.skipped_blacklisted} skipped (blacklisted).`;
+        }
+        alert(msg);
+        window.location.reload();
+      } else {
+        alert(data.message || "Bulk approve failed.");
+      }
+    } catch {
+      alert("Network error.");
+    } finally {
+      bulkVisitorBtn.disabled = false;
     }
   });
 })();
@@ -451,6 +495,39 @@ async function postJSON(url, body) {
       } catch {
         alert("Network error.");
       }
+    });
+  });
+})();
+
+// ---------------------------------------------------------------------------
+// Admin: All Requests — live search filter
+// ---------------------------------------------------------------------------
+
+(function initRequestSearch() {
+  const input = document.getElementById("requestSearch");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase();
+
+    // Query both tables by their IDs
+    const tables = [
+      document.getElementById("allInternalTable"),
+      document.getElementById("allVisitorTable"),
+    ];
+
+    tables.forEach((table) => {
+      if (!table) return;
+      const rows = table.querySelectorAll("tbody tr");
+      rows.forEach((row) => {
+        if (!query) {
+          row.style.display = "";
+          return;
+        }
+        const name = (row.dataset.searchName || "");
+        const id   = (row.dataset.searchId   || "");
+        row.style.display = (name.includes(query) || id.includes(query)) ? "" : "none";
+      });
     });
   });
 })();
@@ -613,14 +690,29 @@ async function validateToken(token) {
   if (!btn || !input) return;
 
   async function run() {
-    const token = input.value.trim();
-    if (!token) return;
+    const nationalId = input.value.trim();
+    if (!nationalId) return;
     btn.disabled = true;
     btn.textContent = "Checking…";
-    await validateToken(token);
-    btn.disabled = false;
-    btn.textContent = "Validate";
-    input.value = "";
+    const direction = (document.getElementById("scanDirection") || {}).value || "ENTRY";
+    try {
+      const { ok, data } = await postJSON("/api/guard/scan-by-id", {
+        national_id: nationalId,
+        scan_type: direction,
+      });
+      if (ok) {
+        showScanResult(true, "ACCESS GRANTED", data.message, data.name || "");
+      } else {
+        const heading = data.result === "BLACKLISTED" ? "BLACKLISTED" : (data.result || "DENIED");
+        showScanResult(false, heading, data.message, "");
+      }
+    } catch {
+      showScanResult(false, "ERROR", "Network error. Please try again.", "");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Validate";
+      input.value = "";
+    }
   }
 
   btn.addEventListener("click", run);
