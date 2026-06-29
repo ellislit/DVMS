@@ -297,7 +297,7 @@
 
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-slate-100">
-      <h3 class="text-sm font-bold text-slate-700">All Internal Pass Requests (Last 50)</h3>
+      <h3 class="text-sm font-bold text-slate-700">Internal pass requests</h3>
     </div>
     {% if all_internal %}
       <div class="overflow-x-auto">
@@ -346,6 +346,30 @@
           </tbody>
         </table>
       </div>
+      <!-- Internal table pagination -->
+      <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
+        <button id="internalPrevBtn"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                       bg-white border border-slate-200 text-slate-600 hover:bg-slate-100
+                       disabled:opacity-40 disabled:cursor-not-allowed transition"
+                disabled>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Previous
+        </button>
+        <span id="internalPageIndicator" class="text-xs font-semibold text-slate-500">Page 1 of 1</span>
+        <button id="internalNextBtn"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                       bg-white border border-slate-200 text-slate-600 hover:bg-slate-100
+                       disabled:opacity-40 disabled:cursor-not-allowed transition"
+                disabled>
+          Next
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
     {% else %}
       <div class="p-8 text-center"><p class="text-sm text-slate-500">No records yet.</p></div>
     {% endif %}
@@ -353,7 +377,7 @@
 
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100">
-      <h3 class="text-sm font-bold text-slate-700">All Visitor Requests (Last 50)</h3>
+      <h3 class="text-sm font-bold text-slate-700">Public Visitors Requests</h3>
     </div>
     {% if all_visitor %}
       <div class="overflow-x-auto">
@@ -401,6 +425,30 @@
             {% endfor %}
           </tbody>
         </table>
+      </div>
+      <!-- Visitor table pagination -->
+      <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
+        <button id="visitorPrevBtn"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                       bg-white border border-slate-200 text-slate-600 hover:bg-slate-100
+                       disabled:opacity-40 disabled:cursor-not-allowed transition"
+                disabled>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Previous
+        </button>
+        <span id="visitorPageIndicator" class="text-xs font-semibold text-slate-500">Page 1 of 1</span>
+        <button id="visitorNextBtn"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                       bg-white border border-slate-200 text-slate-600 hover:bg-slate-100
+                       disabled:opacity-40 disabled:cursor-not-allowed transition"
+                disabled>
+          Next
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
       </div>
     {% else %}
       <div class="p-8 text-center"><p class="text-sm text-slate-500">No visitor records yet.</p></div>

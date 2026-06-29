@@ -500,34 +500,129 @@ async function postJSON(url, body) {
 })();
 
 // ---------------------------------------------------------------------------
-// Admin: All Requests — live search filter
+// Admin: All Requests — pagination + integrated live search
 // ---------------------------------------------------------------------------
 
-(function initRequestSearch() {
-  const input = document.getElementById("requestSearch");
-  if (!input) return;
+(function initRequestsModule() {
+  const ROWS_PER_PAGE = 10;
 
-  input.addEventListener("input", () => {
-    const query = input.value.trim().toLowerCase();
+  /**
+   * Creates an independent paginator for a single table.
+   * @param {string} tableId        - The <table> element ID
+   * @param {string} prevBtnId      - ID of the Previous button
+   * @param {string} nextBtnId      - ID of the Next button
+   * @param {string} indicatorId    - ID of the "Page X of Y" span
+   */
+  function createPaginator(tableId, prevBtnId, nextBtnId, indicatorId) {
+    const table     = document.getElementById(tableId);
+    const prevBtn   = document.getElementById(prevBtnId);
+    const nextBtn   = document.getElementById(nextBtnId);
+    const indicator = document.getElementById(indicatorId);
+    if (!table || !prevBtn || !nextBtn || !indicator) return null;
 
-    // Query both tables by their IDs
-    const tables = [
-      document.getElementById("allInternalTable"),
-      document.getElementById("allVisitorTable"),
-    ];
+    let currentPage  = 1;
+    let searchActive = false;   // true while the search box has a query
 
-    tables.forEach((table) => {
-      if (!table) return;
-      const rows = table.querySelectorAll("tbody tr");
-      rows.forEach((row) => {
-        if (!query) {
-          row.style.display = "";
-          return;
-        }
-        const name = (row.dataset.searchName || "");
-        const id   = (row.dataset.searchId   || "");
-        row.style.display = (name.includes(query) || id.includes(query)) ? "" : "none";
+    /** Returns all <tr> rows in the tbody (regardless of display state). */
+    function allRows() {
+      return [...table.querySelectorAll("tbody tr")];
+    }
+
+    /** Returns only rows that are not hidden by the search filter. */
+    function visibleRows() {
+      return allRows().filter((r) => r.dataset.searchHidden !== "true");
+    }
+
+    /** Renders the correct slice of rows for the current page. */
+    function render() {
+      if (searchActive) {
+        // Search mode: show all matching rows, hide paginator chrome
+        allRows().forEach((r) => {
+          if (r.dataset.searchHidden !== "true") {
+            r.style.display = "";
+          }
+        });
+        indicator.textContent = "";
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+
+      const rows      = allRows();
+      const total     = rows.length;
+      const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+
+      // Clamp current page
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const start = (currentPage - 1) * ROWS_PER_PAGE;
+      const end   = start + ROWS_PER_PAGE;
+
+      rows.forEach((row, i) => {
+        row.style.display = (i >= start && i < end) ? "" : "none";
       });
+
+      indicator.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages;
+    }
+
+    prevBtn.addEventListener("click", () => {
+      if (currentPage > 1) { currentPage--; render(); }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(allRows().length / ROWS_PER_PAGE));
+      if (currentPage < totalPages) { currentPage++; render(); }
+    });
+
+    // Initial render
+    render();
+
+    // Public API consumed by the search handler
+    return {
+      enableSearch()  { searchActive = true;  render(); },
+      disableSearch() { searchActive = false; currentPage = 1; render(); },
+      /** Apply a search query: mark rows, then let render() decide display. */
+      applyFilter(query) {
+        allRows().forEach((row) => {
+          const name = (row.dataset.searchName || "");
+          const id   = (row.dataset.searchId   || "");
+          const match = !query || name.includes(query) || id.includes(query);
+          row.dataset.searchHidden = match ? "false" : "true";
+          if (!match) row.style.display = "none";
+        });
+      },
+    };
+  }
+
+  // Instantiate a paginator for each table
+  const internalPaginator = createPaginator(
+    "allInternalTable",
+    "internalPrevBtn", "internalNextBtn", "internalPageIndicator"
+  );
+  const visitorPaginator = createPaginator(
+    "allVisitorTable",
+    "visitorPrevBtn", "visitorNextBtn", "visitorPageIndicator"
+  );
+
+  // ── Search integration ───────────────────────────────────────────────────
+  const searchInput = document.getElementById("requestSearch");
+  if (!searchInput) return;
+
+  searchInput.addEventListener("input", () => {
+    const query = searchInput.value.trim().toLowerCase();
+
+    [internalPaginator, visitorPaginator].forEach((pager) => {
+      if (!pager) return;
+      if (query) {
+        pager.applyFilter(query);
+        pager.enableSearch();
+      } else {
+        pager.applyFilter("");   // clear hidden flags
+        pager.disableSearch();   // back to page-1 pagination
+      }
     });
   });
 })();
