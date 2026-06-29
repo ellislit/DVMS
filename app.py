@@ -1421,6 +1421,10 @@ def inject_globals():
             + VisitorRequest.query.filter_by(status="Pending").count()
         ),
         "visitors": VisitorRequest.query.count(),
+        "visitors_today": (
+            PassRequest.query.filter_by(visit_date=today).count()
+            + VisitorRequest.query.filter_by(visit_date=today).count()
+        ),
         "audit": AuditLog.query.count(),
     }
     is_authenticated = "user_id" in session

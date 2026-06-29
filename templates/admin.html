@@ -50,10 +50,15 @@
     <p class="text-3xl font-black text-amber-500">{{ pending_count }}</p>
     <p class="text-xs text-slate-400 mt-1">Require your action</p>
   </div>
-  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Blacklisted</p>
-    <p class="text-3xl font-black text-red-600">{{ blacklist | length }}</p>
-    <p class="text-xs text-slate-400 mt-1">Banned individuals</p>
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 relative">
+    <div class="absolute top-5 right-5 p-2 bg-teal-100 text-teal-600 rounded-xl hidden sm:block">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    </div>
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Visitors Today</p>
+    <p class="text-3xl font-black text-teal-600">{{ stats.visitors_today }}</p>
+    <p class="text-xs text-slate-400 mt-1">Total expected traffic</p>
   </div>
 </div>
 
@@ -183,7 +188,7 @@
   <!-- ── Visitor Pending ── -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-      <h3 class="text-sm font-bold text-slate-700">Visitor Requests</h3>
+      <h3 class="text-sm font-bold text-slate-700">Public Pass Requests</h3>
       <div class="flex items-center gap-3">
         <span class="px-2 py-0.5 bg-sky-100 text-sky-700 text-xs font-semibold rounded-full">
           {{ pending_visitor | length }} pending
@@ -206,12 +211,12 @@
               <th class="px-4 py-3 text-left">
                 <input type="checkbox" id="selectAllVisitor" class="rounded border-slate-300 text-sky-600">
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">National ID</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Department</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit Date</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Purpose</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Requester</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitor Details</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Destination</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Reason</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -224,14 +229,19 @@
                          value="{{ req.id }}" data-pass-type="visitor">
                 </td>
                 <td class="px-4 py-3">
-                  <p class="font-semibold text-slate-800 text-xs">{{ req.name }}</p>
-                  <p class="text-slate-400 text-xs">{{ req.email }}</p>
+                  <p class="font-semibold text-slate-800 text-xs">Self (Public)</p>
+                  <p class="text-slate-400 text-xs">Public Web Form</p>
                 </td>
-                <td class="px-4 py-3 text-xs font-mono text-slate-600">{{ req.national_id }}</td>
-                <td class="px-4 py-3 text-xs text-slate-600">{{ req.phone }}</td>
-                <td class="px-4 py-3 text-xs text-slate-700">{{ req.department }}</td>
-                <td class="px-4 py-3 text-xs text-slate-600">{{ req.visit_date.strftime('%d %b %Y') }}</td>
-                <td class="px-4 py-3 text-xs text-slate-500 max-w-[10rem]">
+                <td class="px-4 py-3 space-y-0.5">
+                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.name }}</span></p>
+                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.national_id }}</p>
+                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Tel:</span> {{ req.phone }}</p>
+                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Email:</span> {{ req.email }}</p>
+                </td>
+                <td class="px-4 py-3 text-slate-700 font-medium text-xs">{{ req.department }}</td>
+                <td class="px-4 py-3 text-slate-600 text-xs">{{ req.visit_date.strftime('%d %b %Y') }}</td>
+                <td class="px-4 py-3 text-slate-500 text-xs font-mono">{{ req.time_window }}</td>
+                <td class="px-4 py-3 text-slate-500 text-xs max-w-[10rem]">
                   <span title="{{ req.purpose }}">{{ req.purpose | truncate(50) }}</span>
                 </td>
                 <td class="px-4 py-3">
