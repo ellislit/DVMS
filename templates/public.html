@@ -62,11 +62,13 @@
             Phone Number <span class="text-red-500">*</span>
           </label>
           <input type="tel" id="phone" name="phone" required
+                 pattern="^\+?[0-9]{10,15}$"
+                 title="Enter a valid phone number (10 to 15 digits, optional + prefix)"
                  value="+254 "
                  placeholder="+233 24 000 0000"
                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
                         text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
-                        focus:border-transparent transition" />
+                        focus:border-transparent transition invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500 invalid:[&:not(:placeholder-shown):not(:focus)]:ring-red-500" />
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="email">
@@ -76,7 +78,7 @@
                  placeholder="you@example.com"
                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
                         text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
-                        focus:border-transparent transition" />
+                        focus:border-transparent transition invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500 invalid:[&:not(:placeholder-shown):not(:focus)]:ring-red-500" />
         </div>
       </div>
 
@@ -118,6 +120,18 @@
             <option value="{{ dept }}">{{ dept }}</option>
           {% endfor %}
         </select>
+      </div>
+
+      <!-- Row 4.5: Time Window -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="time_window">
+          Time Window <span class="text-slate-400 font-normal ml-1">(Optional)</span>
+        </label>
+        <input type="text" id="time_window" name="time_window"
+               placeholder="e.g. 09:00 - 18:00"
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
+                      text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                      focus:border-transparent transition">
       </div>
 
       <!-- Row 5: Purpose -->

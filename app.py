@@ -673,20 +673,12 @@ def requester_page():
         PassRequest.query.filter_by(requester_id=user.id)
         .order_by(PassRequest.created_at.desc()).all()
     )
-    active_passes = [p for p in all_passes if p.status in ("Approved", "Checked In") and p.visit_date >= today]
-    pending_passes = [p for p in all_passes if p.status == "Pending"]
-    expired_passes = [
-        p for p in all_passes
-        if p.status in ("Rejected", "Expired", "Checked Out") or (p.status in ("Approved", "Checked In") and p.visit_date < today)
-    ]
-    qr_map = {p.id: generate_qr_base64(p.qr_token) for p in active_passes if p.qr_token}
+    qr_map = {p.id: generate_qr_base64(p.qr_token) for p in all_passes if p.qr_token}
 
     return render_template(
         "requester.html",
         user=user,
-        active_passes=active_passes,
-        pending_passes=pending_passes,
-        expired_passes=expired_passes,
+        passes=all_passes,
         qr_map=qr_map,
         departments=DEPARTMENTS,
     )
@@ -1053,6 +1045,7 @@ def api_visitor_request():
         phone=data["phone"].strip(),
         email=data["email"].strip(),
         visit_date=visit_date,
+        time_window=data.get("time_window", "").strip(),
         vehicle_reg=data.get("vehicle_reg", "").strip() or None,
         department=data["department"].strip(),
         purpose=data["purpose"].strip(),
