@@ -344,13 +344,13 @@ def login_required(f):
 def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
     """Send a professional gate pass email via Brevo API.
 
-    Uses the CID (Content-ID) attachment method so the QR code image
-    renders inline in Gmail, Outlook, and Apple Mail without being
-    blocked as a remote/embedded resource.  The raw 32-char token is
-    NOT shown in the email body; visitors are instructed to carry their
-    National ID as a manual fallback for the guard.
+    The QR code is sent as a standard PNG attachment (no CID/inline embed)
+    so the payload is accepted by all Brevo plan tiers.  The raw token is
+    NOT shown in the email body; visitors are told to carry their National ID
+    as the guard's manual fallback.
     """
     import urllib.request
+    import urllib.error
     import json
     import base64
     import os
@@ -370,7 +370,7 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
         else str(visit_date)
     )
 
-    # ── 1. Generate QR code and encode to base64 ──────────────────────────────
+    # ── 1. Generate QR code PNG → base64 ─────────────────────────────────────
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(qr_token)
     qr.make(fit=True)
@@ -379,7 +379,7 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
     img.save(buf, format="PNG")
     b64_image = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    # ── 2. HTML body — CID image reference, no raw token, National ID alert ───
+    # ── 2. HTML body — no inline image, attachment note, National ID alert ────
     html_body = f"""\
 <!DOCTYPE html>
 <html lang="en">
@@ -400,21 +400,21 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
     </p>
     <p style="color:#475569;font-size:15px;">
       Your gate pass for <strong style="color:#0f172a;">{visit_str}</strong> has been
-      approved. Please present the QR code below to the security officer at the
-      main campus gate upon arrival.
+      approved. Please find your <strong>Gate Pass QR Code attached to this email</strong>
+      as an image file. Open or download the attachment and show it to the security
+      officer at the main campus gate upon arrival.
     </p>
 
-    <!-- QR code rendered via CID inline attachment -->
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
-                padding:28px;text-align:center;margin:24px 0;">
-      <p style="font-weight:700;color:#1e293b;margin:0 0 16px;font-size:14px;">
-        Your Gate Pass QR Code
+    <!-- Attachment reminder box -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
+                padding:20px 24px;text-align:center;margin:24px 0;">
+      <p style="font-size:28px;margin:0 0 8px;">&#128206;</p>
+      <p style="font-weight:700;color:#166534;font-size:14px;margin:0 0 4px;">
+        QR Code Attached
       </p>
-      <img src="cid:qrcode_image"
-           alt="Gate Pass QR Code"
-           style="width:220px;height:220px;border-radius:6px;border:1px solid #cbd5e1;" />
-      <p style="color:#64748b;font-size:12px;margin:14px 0 0;">
-        A printable copy of this QR code is also attached to this email.
+      <p style="color:#15803d;font-size:13px;margin:0;">
+        Open <strong>kabarak_gatepass_qr.png</strong> from the attachments section
+        of this email.
       </p>
     </div>
 
@@ -424,9 +424,9 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
       <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
         <strong>&#x26A0;&#xFE0F;&nbsp;IMPORTANT &mdash; Carry Your Physical ID</strong><br>
         Please bring your <strong>original National ID or Passport</strong> on the day
-        of your visit. If your device cannot display the QR code or the scanner
-        fails, the security officer will verify your entry using your ID number
-        as a manual fallback.
+        of your visit. If you cannot open the QR code attachment or the scanner fails,
+        the security officer will verify your entry using your ID number as a manual
+        fallback.
       </p>
     </div>
 
@@ -446,8 +446,7 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
 </body>
 </html>"""
 
-    # ── 3. Brevo API payload ──────────────────────────────────────────────────
-    #   contentId links the attachment to <img src="cid:qrcode_image">
+    # ── 3. Brevo API payload (plain attachment, no contentId) ─────────────────
     payload = {
         "sender":  {"name": "Kabarak University Security", "email": sender_email},
         "to":      [{"email": visitor_email, "name": visitor_name}],
@@ -455,9 +454,8 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
         "htmlContent": html_body,
         "attachment": [
             {
-                "content":   b64_image,
-                "name":      "Kabarak_GatePass_QR.png",
-                "contentId": "qrcode_image",
+                "content": b64_image,
+                "name":    "kabarak_gatepass_qr.png",
             }
         ],
     }
@@ -467,9 +465,9 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
         "https://api.brevo.com/v3/smtp/email",
         data=json.dumps(payload).encode("utf-8"),
         headers={
+            "accept":       "application/json",
             "api-key":      api_key,
-            "Content-Type": "application/json",
-            "Accept":       "application/json",
+            "content-type": "application/json",
         },
         method="POST",
     )
@@ -477,6 +475,13 @@ def send_gatepass_email(visitor_email, visitor_name, qr_token, visit_date):
     try:
         with urllib.request.urlopen(api_req) as response:
             logger.info("Gate pass email sent to %s (HTTP %s).", visitor_email, response.status)
+    except urllib.error.HTTPError as exc:
+        # Log the full Brevo error body for easy diagnosis
+        error_body = exc.read().decode("utf-8", errors="replace")
+        logger.error(
+            "Brevo API rejected email to %s — HTTP %s: %s",
+            visitor_email, exc.code, error_body,
+        )
     except Exception as exc:
         logger.error("Failed to send gate pass email to %s: %s", visitor_email, exc)
 
