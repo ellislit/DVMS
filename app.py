@@ -1144,20 +1144,31 @@ def api_guard_scan():
         record.status = "Checked Out"
         db.session.commit()
 
-    name = record.requester_name if pass_type == "internal" else record.name
-    _log("VALID", f"{scan_type} scan recorded for {name}.")
+    if pass_type == "internal":
+        visitor_name = record.visitor_name
+        national_id = record.visitor_national_id
+        host_name = record.requester_name
+    else:
+        visitor_name = record.name
+        national_id = record.national_id
+        host_name = "Self (Public)"
+
+    _log("VALID", f"{scan_type} scan recorded for {visitor_name}.")
 
     if scan_type == "ENTRY":
-        success_msg = f"Entry successful \u2014 {name}"
+        success_msg = f"Entry successful \u2014 {visitor_name}"
     elif scan_type == "EXIT":
-        success_msg = f"Exit successful \u2014 {name}"
+        success_msg = f"Exit successful \u2014 {visitor_name}"
     else:
-        success_msg = f"Walk-In cleared \u2014 {name}"
+        success_msg = f"Walk-In cleared \u2014 {visitor_name}"
 
     return jsonify({
         "success": True, "result": "VALID",
         "message": success_msg,
-        "name": name, "pass_type": pass_type,
+        "name": visitor_name, 
+        "national_id": national_id,
+        "host_name": host_name,
+        "pass_type": pass_type,
     })
 
 
@@ -1255,15 +1266,25 @@ def api_guard_scan_by_id():
         record.status = "Checked Out"
     db.session.commit()
 
-    name = record.requester_name if pass_type == "internal" else record.name
-    success_msg = f"{'Entry' if scan_type == 'ENTRY' else 'Exit'} successful \u2014 {name}"
-    _log("VALID", f"{scan_type} scan (by National ID) recorded for {name}.", record.qr_token)
+    if pass_type == "internal":
+        visitor_name = record.visitor_name
+        # we know national_id already matches record.visitor_national_id
+        host_name = record.requester_name
+    else:
+        visitor_name = record.name
+        # we know national_id already matches record.national_id
+        host_name = "Self (Public)"
+
+    success_msg = f"{'Entry' if scan_type == 'ENTRY' else 'Exit'} successful \u2014 {visitor_name}"
+    _log("VALID", f"{scan_type} scan (by National ID) recorded for {visitor_name}.", record.qr_token)
 
     return jsonify({
         "success": True,
         "result": "VALID",
         "message": success_msg,
-        "name": name,
+        "name": visitor_name,
+        "national_id": national_id,
+        "host_name": host_name,
         "pass_type": pass_type,
     })
 
