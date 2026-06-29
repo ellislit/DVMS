@@ -673,12 +673,20 @@ def requester_page():
         PassRequest.query.filter_by(requester_id=user.id)
         .order_by(PassRequest.created_at.desc()).all()
     )
-    qr_map = {p.id: generate_qr_base64(p.qr_token) for p in all_passes if p.qr_token}
+    active_passes = [p for p in all_passes if p.status in ("Approved", "Checked In") and p.visit_date >= today]
+    pending_passes = [p for p in all_passes if p.status == "Pending"]
+    expired_passes = [
+        p for p in all_passes
+        if p.status in ("Rejected", "Expired", "Checked Out") or (p.status in ("Approved", "Checked In") and p.visit_date < today)
+    ]
+    qr_map = {p.id: generate_qr_base64(p.qr_token) for p in active_passes if p.qr_token}
 
     return render_template(
         "requester.html",
         user=user,
-        passes=all_passes,
+        active_passes=active_passes,
+        pending_passes=pending_passes,
+        expired_passes=expired_passes,
         qr_map=qr_map,
         departments=DEPARTMENTS,
     )

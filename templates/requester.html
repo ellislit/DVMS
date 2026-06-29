@@ -136,24 +136,22 @@
 <section class="mb-8">
   <div class="flex items-center gap-2 mb-4">
     <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-    <h2 class="text-base font-bold text-slate-800">Active & Upcoming Passes</h2>
+    <h2 class="text-base font-bold text-slate-800">Active Passes</h2>
+    <span class="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+      {{ active_passes | length }}
+    </span>
   </div>
 
-  {% if passes %}
+  {% if active_passes %}
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {% for pass in passes %}
-        {% if pass.status == 'Pending' or pass.status == 'Approved' %}
+      {% for pass in active_passes %}
         <div class="bg-white rounded-2xl border border-green-200 shadow-sm p-5 hover:shadow-md transition">
           <div class="flex items-start justify-between mb-3">
             <div>
               <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pass #{{ pass.id }}</p>
               <p class="font-bold text-slate-800 text-sm mt-0.5">{{ pass.destination }}</p>
             </div>
-            {% if pass.status == 'Approved' %}
-              <span class="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">APPROVED</span>
-            {% else %}
-              <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">PENDING</span>
-            {% endif %}
+            <span class="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">ACTIVE</span>
           </div>
           <div class="space-y-1.5 text-xs text-slate-500 mb-4">
             <div class="flex items-center gap-1.5">
@@ -195,7 +193,6 @@
             </div>
           {% endif %}
         </div>
-        {% endif %}
       {% endfor %}
     </div>
   {% else %}
@@ -206,10 +203,58 @@
         </svg>
       </div>
       <p class="text-sm font-semibold text-slate-500">No active passes</p>
-      <p class="text-xs text-slate-400 mt-1">Approved or pending passes will appear here.</p>
+      <p class="text-xs text-slate-400 mt-1">Approved passes for today or future dates will appear here.</p>
     </div>
   {% endif %}
 </section>
+
+<!-- ═══════════ PENDING REQUESTS ═══════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+    <h2 class="text-base font-bold text-slate-800">Pending Requests</h2>
+    <span class="ml-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+      {{ pending_passes | length }}
+    </span>
+  </div>
+
+  {% if pending_passes %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Destination</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Date</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Time Window</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Submitted</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+            <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for pass in pending_passes %}
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-medium text-slate-800">{{ pass.destination }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ pass.visit_date.strftime('%d %b %Y') }}</td>
+              <td class="px-4 py-3 text-slate-500 text-xs font-mono">{{ pass.time_window }}</td>
+              <td class="px-4 py-3 text-slate-400 text-xs">{{ pass.created_at.strftime('%d %b %Y %H:%M') }}</td>
+              <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Pending</span>
+              </td>
+              <td class="px-4 py-3">{{ pass_actions(pass) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+      <p class="text-sm text-slate-500">No pending requests.</p>
+    </div>
+  {% endif %}
+</section>
+
+
 
 <!-- ═══════════ NEW REQUEST FORM ═══════════ -->
 <div id="requestFormCard" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
