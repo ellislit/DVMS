@@ -813,6 +813,23 @@ def api_pass_request():
 # API — Admin actions
 # ---------------------------------------------------------------------------
 
+def _dispatch_approval_email(record, pass_type, token):
+    """Helper to dispatch approval emails for both single and bulk approvals."""
+    try:
+        if pass_type == "internal":
+            v_email = record.visitor_email
+            v_name = record.visitor_name
+        else:
+            v_email = record.email
+            v_name = record.name
+
+        if v_email:
+            send_gatepass_email(v_email, v_name, token, record.visit_date)
+        else:
+            logger.warning("No email address found for approved pass record ID: %s", record.id)
+    except Exception as e:
+        logger.error("Error dispatching email for record %s: %s", record.id, e)
+
 @app.route("/api/admin/approve", methods=["POST"])
 @role_required("admin")
 def api_admin_approve():
@@ -839,16 +856,7 @@ def api_admin_approve():
     db.session.commit()
 
     # ── Email notification on approval ────────────────────────────────────────
-    if pass_type == "internal":
-        v_email = record.visitor_email
-        v_name = record.visitor_name
-    else:
-        v_email = record.email
-        v_name = record.name
-
-    if v_email:
-        # Run directly! The Brevo API is fast enough to not freeze the UI.
-        send_gatepass_email(v_email, v_name, token, record.visit_date)
+    _dispatch_approval_email(record, pass_type, token)
         
     return jsonify({"success": True, "qr_token": token, "message": "Pass approved and email sent."})
 
@@ -886,15 +894,23 @@ def api_bulk_approve():
     model = PassRequest if pass_type == "internal" else VisitorRequest
     approved = 0
     skipped_blacklisted = 0
+    
     for pid in ids:
         record = model.query.get(pid)
         if record and record.status == "Pending":
             if _get_blacklist_entry(_pass_record_national_id(record, pass_type)):
                 skipped_blacklisted += 1
                 continue
+            
+            token = uuid.uuid4().hex[:32]
             record.status = "Approved"
-            record.qr_token = uuid.uuid4().hex[:32]
+            record.qr_token = token
+            
+            # Dispatch email for each approved record in the bulk action
+            _dispatch_approval_email(record, pass_type, token)
+            
             approved += 1
+            
     db.session.commit()
     return jsonify({
         "success": True,
