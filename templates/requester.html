@@ -336,10 +336,30 @@
         <select id="destination" name="destination" required
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900
                        text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
-          <option value="" disabled selected>Select destination…</option>
-          {% for dept in departments %}
-            <option value="{{ dept }}">{{ dept }}</option>
-          {% endfor %}
+          <option value="" disabled selected>Select a department...</option>
+
+          <optgroup label="Academic Schools">
+              <option value="School of Business & Economics">School of Business & Economics</option>
+              <option value="School of Education, Humanities & Social Sciences">School of Education, Humanities & Social Sciences</option>
+              <option value="School of Law">School of Law</option>
+              <option value="School of Medicine & Health Sciences">School of Medicine & Health Sciences</option>
+              <option value="School of Music & Media">School of Music & Media</option>
+              <option value="School of Pharmacy">School of Pharmacy</option>
+              <option value="School of Science, Engineering & Technology">School of Science, Engineering & Technology</option>
+              <option value="Institute of Postgraduate Studies">Institute of Postgraduate Studies</option>
+          </optgroup>
+
+          <optgroup label="Administrative Offices">
+              <option value="Administration / VC's Office">Administration / VC's Office</option>
+              <option value="Admissions & Registry">Admissions & Registry</option>
+              <option value="Finance Office">Finance Office</option>
+              <option value="Human Resources">Human Resources</option>
+              <option value="ICT Support">ICT Support</option>
+              <option value="Library">Library</option>
+              <option value="Medical Centre">Medical Centre</option>
+              <option value="Security Office">Security Office</option>
+              <option value="Spiritual & Student Affairs">Spiritual & Student Affairs</option>
+          </optgroup>
         </select>
       </div>
       <div>
