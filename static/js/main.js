@@ -110,7 +110,7 @@ async function postJSON(url, body) {
     const payload = {
       name:        form.name.value.trim(),
       national_id: form.national_id.value.trim(),
-      phone:       form.phone.value.trim(),
+      phone:               "+254" + form.phone.value.trim(),
       email:       form.email.value.trim(),
       visit_date:  form.visit_date.value,
       vehicle_reg: form.vehicle_reg ? form.vehicle_reg.value.trim() : "",
@@ -157,7 +157,7 @@ async function postJSON(url, body) {
       reason:              form.reason.value.trim(),
       visitor_name:        form.visitor_name.value.trim(),
       visitor_national_id: form.visitor_national_id.value.trim(),
-      visitor_phone:       form.visitor_phone.value.trim(),
+      visitor_phone:       "+254" + form.visitor_phone.value.trim(),
       visitor_email:       form.visitor_email.value.trim(),
       visitor_vehicle_reg: form.visitor_vehicle_reg ? form.visitor_vehicle_reg.value.trim() : "",
     };

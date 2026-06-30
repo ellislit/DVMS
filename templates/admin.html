@@ -140,13 +140,16 @@
                   <p class="font-semibold text-slate-800 text-xs">{{ req.requester_name }}</p>
                   <p class="text-slate-400 text-xs">{{ req.requester_type }}</p>
                 </td>
-                <td class="px-4 py-3 space-y-0.5">
-                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.visitor_name }}</span></p>
-                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.visitor_national_id }}</p>
-                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Tel:</span> {{ req.visitor_phone }}</p>
-                  {% if req.visitor_vehicle_reg %}
-                    <p class="text-xs text-slate-500"><span class="text-slate-400 font-medium">Veh:</span> 🚗 {{ req.visitor_vehicle_reg }}</p>
-                  {% endif %}
+                <td class="px-4 py-3">
+                  <div class="text-sm text-gray-500">
+                    <div><span class="font-medium text-gray-700">Name:</span> {{ req.visitor_name }}</div>
+                    <div><span class="font-medium text-gray-700">ID:</span> {{ req.visitor_national_id }}</div>
+                    <div><span class="font-medium text-gray-700">Tel:</span> {{ req.visitor_phone }}</div>
+                    <div><span class="font-medium text-gray-700">Email:</span> {{ req.visitor_email }}</div>
+                    {% if req.visitor_vehicle_reg %}
+                    <div><span class="font-medium text-gray-700">Veh:</span> 🚗 {{ req.visitor_vehicle_reg }}</div>
+                    {% endif %}
+                  </div>
                 </td>
                 <td class="px-4 py-3 text-slate-700 font-medium text-xs">{{ req.destination }}</td>
                 <td class="px-4 py-3 text-slate-600 text-xs">{{ req.visit_date.strftime('%d %b %Y') }}</td>
@@ -232,11 +235,16 @@
                   <p class="font-semibold text-slate-800 text-xs">Self (Public)</p>
                   <p class="text-slate-400 text-xs">Public Web Form</p>
                 </td>
-                <td class="px-4 py-3 space-y-0.5">
-                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.name }}</span></p>
-                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.national_id }}</p>
-                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Tel:</span> {{ req.phone }}</p>
-                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Email:</span> {{ req.email }}</p>
+                <td class="px-4 py-3">
+                  <div class="text-sm text-gray-500">
+                    <div><span class="font-medium text-gray-700">Name:</span> {{ req.name }}</div>
+                    <div><span class="font-medium text-gray-700">ID:</span> {{ req.national_id }}</div>
+                    <div><span class="font-medium text-gray-700">Tel:</span> {{ req.phone }}</div>
+                    <div><span class="font-medium text-gray-700">Email:</span> {{ req.email }}</div>
+                    {% if req.vehicle_reg %}
+                    <div><span class="font-medium text-gray-700">Veh:</span> 🚗 {{ req.vehicle_reg }}</div>
+                    {% endif %}
+                  </div>
                 </td>
                 <td class="px-4 py-3 text-slate-700 font-medium text-xs">{{ req.department }}</td>
                 <td class="px-4 py-3 text-slate-600 text-xs">{{ req.visit_date.strftime('%d %b %Y') }}</td>
@@ -329,13 +337,16 @@
               <tr class="hover:bg-slate-50" data-search-name="{{ req.visitor_name | lower }}" data-search-id="{{ req.visitor_national_id | lower }}">
                 <td class="px-4 py-3 text-xs text-slate-400">{{ req.id }}</td>
                 <td class="px-4 py-3 text-xs font-medium text-slate-800">{{ req.requester_name }}</td>
-                <td class="px-4 py-3 space-y-0.5">
-                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.visitor_name }}</span></p>
-                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.visitor_national_id }}</p>
-                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Tel:</span> {{ req.visitor_phone }}</p>
-                  {% if req.visitor_vehicle_reg %}
-                    <p class="text-xs text-slate-500"><span class="text-slate-400 font-medium">Veh:</span> 🚗 {{ req.visitor_vehicle_reg }}</p>
-                  {% endif %}
+                <td class="px-4 py-3">
+                  <div class="text-sm text-gray-500">
+                    <div><span class="font-medium text-gray-700">Name:</span> {{ req.visitor_name }}</div>
+                    <div><span class="font-medium text-gray-700">ID:</span> {{ req.visitor_national_id }}</div>
+                    <div><span class="font-medium text-gray-700">Tel:</span> {{ req.visitor_phone }}</div>
+                    <div><span class="font-medium text-gray-700">Email:</span> {{ req.visitor_email }}</div>
+                    {% if req.visitor_vehicle_reg %}
+                    <div><span class="font-medium text-gray-700">Veh:</span> 🚗 {{ req.visitor_vehicle_reg }}</div>
+                    {% endif %}
+                  </div>
                 </td>
                 <td class="px-4 py-3 text-xs text-slate-600">{{ req.destination }}</td>
                 <td class="px-4 py-3 text-xs text-slate-500">{{ req.visit_date.strftime('%d %b %Y') }}</td>
@@ -396,7 +407,6 @@
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitor Details</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Department</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit Date</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Purpose</th>
@@ -408,15 +418,17 @@
             {% for req in all_visitor %}
               <tr class="hover:bg-slate-50" data-search-name="{{ req.name | lower }}" data-search-id="{{ req.national_id | lower }}">
                 <td class="px-4 py-3 text-xs text-slate-400">{{ req.id }}</td>
-                <td class="px-4 py-3 space-y-0.5">
-                  <p class="text-xs text-slate-800"><span class="text-slate-400 font-medium">Name:</span> <span class="font-semibold">{{ req.name }}</span></p>
-                  <p class="text-xs text-slate-600 font-mono"><span class="text-slate-400 font-medium font-sans">ID:</span> {{ req.national_id }}</p>
-                  <p class="text-xs text-slate-600"><span class="text-slate-400 font-medium">Email:</span> {{ req.email }}</p>
-                  {% if req.vehicle_reg %}
-                    <p class="text-xs text-slate-500"><span class="text-slate-400 font-medium">Veh:</span> 🚗 {{ req.vehicle_reg }}</p>
-                  {% endif %}
+                <td class="px-4 py-3">
+                  <div class="text-sm text-gray-500">
+                    <div><span class="font-medium text-gray-700">Name:</span> {{ req.name }}</div>
+                    <div><span class="font-medium text-gray-700">ID:</span> {{ req.national_id }}</div>
+                    <div><span class="font-medium text-gray-700">Tel:</span> {{ req.phone }}</div>
+                    <div><span class="font-medium text-gray-700">Email:</span> {{ req.email }}</div>
+                    {% if req.vehicle_reg %}
+                    <div><span class="font-medium text-gray-700">Veh:</span> 🚗 {{ req.vehicle_reg }}</div>
+                    {% endif %}
+                  </div>
                 </td>
-                <td class="px-4 py-3 text-xs text-slate-600">{{ req.phone }}</td>
                 <td class="px-4 py-3 text-xs text-slate-700">{{ req.department }}</td>
                 <td class="px-4 py-3 text-xs text-slate-500">{{ req.visit_date.strftime('%d %b %Y') }}</td>
                 <td class="px-4 py-3 text-xs text-slate-500 max-w-[10rem]">

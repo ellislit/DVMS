@@ -637,10 +637,10 @@ def admin_page():
 
     # ── Chart data: Pass Requests by Department/Destination ────────────────────────
     dept_counts = {}
-    for req in PassRequest.query.all():
+    for req in PassRequest.query.filter(PassRequest.status.in_(['Checked In', 'Checked Out'])).all():
         dest = req.destination or "Other"
         dept_counts[dest] = dept_counts.get(dest, 0) + 1
-    for req in VisitorRequest.query.all():
+    for req in VisitorRequest.query.filter(VisitorRequest.status.in_(['Checked In', 'Checked Out'])).all():
         dept = req.department or "Other"
         dept_counts[dept] = dept_counts.get(dept, 0) + 1
     chart_labels = list(dept_counts.keys())
