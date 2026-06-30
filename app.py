@@ -886,16 +886,37 @@ def api_bulk_approve():
     model = PassRequest if pass_type == "internal" else VisitorRequest
     approved = 0
     skipped_blacklisted = 0
+    email_tasks = []
+
     for pid in ids:
         record = model.query.get(pid)
         if record and record.status == "Pending":
             if _get_blacklist_entry(_pass_record_national_id(record, pass_type)):
                 skipped_blacklisted += 1
                 continue
+            token = uuid.uuid4().hex[:32]
             record.status = "Approved"
-            record.qr_token = uuid.uuid4().hex[:32]
+            record.qr_token = token
             approved += 1
+
+            if pass_type == "internal":
+                v_email = record.visitor_email
+                v_name = record.visitor_name
+            else:
+                v_email = record.email
+                v_name = record.name
+
+            if v_email:
+                email_tasks.append((v_email, v_name, token, record.visit_date))
+
     db.session.commit()
+
+    if email_tasks:
+        def _send_all(tasks):
+            for v_email, v_name, token, visit_date in tasks:
+                send_gatepass_email(v_email, v_name, token, visit_date)
+        threading.Thread(target=_send_all, args=(email_tasks,), daemon=True).start()
+
     return jsonify({
         "success": True,
         "approved": approved,
