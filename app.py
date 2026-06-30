@@ -1391,10 +1391,10 @@ def seed_demo_data():
     if User.query.first():
         return
     users = [
-        {"login_id": "admin",     "name": "Mrs. Grace Nwosu",    "role": "admin",    "password": "admin123"},
-        {"login_id": "guard01",   "name": "Officer Daniel Kofi", "role": "guard",    "password": "guard123"},
-        {"login_id": "student01", "name": "Amina Yusuf",         "role": "internal", "password": "student123"},
-        {"login_id": "staff01",   "name": "Dr. Kevin Mensah",    "role": "internal", "password": "staff123"},
+        {"login_id": "admin",     "name": "John Doe",      "role": "admin",    "password": "admin123"},
+        {"login_id": "guard01",   "name": "Bob Smith",     "role": "guard",    "password": "guard123"},
+        {"login_id": "student01", "name": "Alice Johnson", "role": "internal", "password": "student123"},
+        {"login_id": "staff01",   "name": "Jane Doe",      "role": "internal", "password": "staff123"},
     ]
     for u in users:
         user = User(login_id=u["login_id"], name=u["name"], role=u["role"])
