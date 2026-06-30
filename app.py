@@ -1128,7 +1128,7 @@ def api_guard_scan():
         record.status = "Checked Out"
         db.session.commit()
 
-    name = record.requester_name if pass_type == "internal" else record.name
+    name = record.visitor_name if pass_type == "internal" else record.name
     _log("VALID", f"{scan_type} scan recorded for {name}.")
 
     if scan_type == "ENTRY":
@@ -1239,7 +1239,7 @@ def api_guard_scan_by_id():
         record.status = "Checked Out"
     db.session.commit()
 
-    name = record.requester_name if pass_type == "internal" else record.name
+    name = record.visitor_name if pass_type == "internal" else record.name
     success_msg = f"{'Entry' if scan_type == 'ENTRY' else 'Exit'} successful \u2014 {name}"
     _log("VALID", f"{scan_type} scan (by National ID) recorded for {name}.", record.qr_token)
 
@@ -1353,10 +1353,10 @@ def seed_demo_data():
     if User.query.first():
         return
     users = [
-        {"login_id": "admin",     "name": "Mr. John Doe",    "role": "admin",    "password": "admin123"},
-        {"login_id": "guard01",   "name": "Officer Bob Smith", "role": "guard",    "password": "guard123"},
-        {"login_id": "student01", "name": "Alice Johnson",         "role": "internal", "password": "student123"},
-        {"login_id": "staff01",   "name": "Dr. Mary Jane ",    "role": "internal", "password": "staff123"},
+        {"login_id": "admin",     "name": "John Doe",      "role": "admin",    "password": "admin123"},
+        {"login_id": "guard01",   "name": "Bob Smith",     "role": "guard",    "password": "guard123"},
+        {"login_id": "student01", "name": "Alice Johnson", "role": "internal", "password": "student123"},
+        {"login_id": "staff01",   "name": "Jane Doe",      "role": "internal", "password": "staff123"},
     ]
     for u in users:
         user = User(login_id=u["login_id"], name=u["name"], role=u["role"])
@@ -1383,6 +1383,10 @@ def inject_globals():
             + VisitorRequest.query.filter_by(status="Pending").count()
         ),
         "visitors": VisitorRequest.query.count(),
+        "visitors_today": (
+            PassRequest.query.filter_by(visit_date=today).count()
+            + VisitorRequest.query.filter_by(visit_date=today).count()
+        ),
         "audit": AuditLog.query.count(),
     }
     is_authenticated = "user_id" in session
