@@ -813,23 +813,6 @@ def api_pass_request():
 # API — Admin actions
 # ---------------------------------------------------------------------------
 
-def _dispatch_approval_email(record, pass_type, token):
-    """Helper to dispatch approval emails for both single and bulk approvals."""
-    try:
-        if pass_type == "internal":
-            v_email = record.visitor_email
-            v_name = record.visitor_name
-        else:
-            v_email = record.email
-            v_name = record.name
-
-        if v_email:
-            send_gatepass_email(v_email, v_name, token, record.visit_date)
-        else:
-            logger.warning("No email address found for approved pass record ID: %s", record.id)
-    except Exception as e:
-        logger.error("Error dispatching email for record %s: %s", record.id, e)
-
 @app.route("/api/admin/approve", methods=["POST"])
 @role_required("admin")
 def api_admin_approve():
@@ -856,7 +839,16 @@ def api_admin_approve():
     db.session.commit()
 
     # ── Email notification on approval ────────────────────────────────────────
-    _dispatch_approval_email(record, pass_type, token)
+    if pass_type == "internal":
+        v_email = record.visitor_email
+        v_name = record.visitor_name
+    else:
+        v_email = record.email
+        v_name = record.name
+
+    if v_email:
+        # Run directly! The Brevo API is fast enough to not freeze the UI.
+        send_gatepass_email(v_email, v_name, token, record.visit_date)
         
     return jsonify({"success": True, "qr_token": token, "message": "Pass approved and email sent."})
 
@@ -894,23 +886,15 @@ def api_bulk_approve():
     model = PassRequest if pass_type == "internal" else VisitorRequest
     approved = 0
     skipped_blacklisted = 0
-    
     for pid in ids:
         record = model.query.get(pid)
         if record and record.status == "Pending":
             if _get_blacklist_entry(_pass_record_national_id(record, pass_type)):
                 skipped_blacklisted += 1
                 continue
-            
-            token = uuid.uuid4().hex[:32]
             record.status = "Approved"
-            record.qr_token = token
-            
-            # Dispatch email for each approved record in the bulk action
-            _dispatch_approval_email(record, pass_type, token)
-            
+            record.qr_token = uuid.uuid4().hex[:32]
             approved += 1
-            
     db.session.commit()
     return jsonify({
         "success": True,
@@ -1053,7 +1037,6 @@ def api_visitor_request():
         phone=data["phone"].strip(),
         email=data["email"].strip(),
         visit_date=visit_date,
-        time_window=data.get("time_window", "").strip(),
         vehicle_reg=data.get("vehicle_reg", "").strip() or None,
         department=data["department"].strip(),
         purpose=data["purpose"].strip(),
@@ -1145,31 +1128,20 @@ def api_guard_scan():
         record.status = "Checked Out"
         db.session.commit()
 
-    if pass_type == "internal":
-        visitor_name = record.visitor_name
-        national_id = record.visitor_national_id
-        host_name = record.requester_name
-    else:
-        visitor_name = record.name
-        national_id = record.national_id
-        host_name = "Self (Public)"
-
-    _log("VALID", f"{scan_type} scan recorded for {visitor_name}.")
+    name = record.requester_name if pass_type == "internal" else record.name
+    _log("VALID", f"{scan_type} scan recorded for {name}.")
 
     if scan_type == "ENTRY":
-        success_msg = f"Entry successful \u2014 {visitor_name}"
+        success_msg = f"Entry successful \u2014 {name}"
     elif scan_type == "EXIT":
-        success_msg = f"Exit successful \u2014 {visitor_name}"
+        success_msg = f"Exit successful \u2014 {name}"
     else:
-        success_msg = f"Walk-In cleared \u2014 {visitor_name}"
+        success_msg = f"Walk-In cleared \u2014 {name}"
 
     return jsonify({
         "success": True, "result": "VALID",
         "message": success_msg,
-        "name": visitor_name, 
-        "national_id": national_id,
-        "host_name": host_name,
-        "pass_type": pass_type,
+        "name": name, "pass_type": pass_type,
     })
 
 
@@ -1267,25 +1239,15 @@ def api_guard_scan_by_id():
         record.status = "Checked Out"
     db.session.commit()
 
-    if pass_type == "internal":
-        visitor_name = record.visitor_name
-        # we know national_id already matches record.visitor_national_id
-        host_name = record.requester_name
-    else:
-        visitor_name = record.name
-        # we know national_id already matches record.national_id
-        host_name = "Self (Public)"
-
-    success_msg = f"{'Entry' if scan_type == 'ENTRY' else 'Exit'} successful \u2014 {visitor_name}"
-    _log("VALID", f"{scan_type} scan (by National ID) recorded for {visitor_name}.", record.qr_token)
+    name = record.requester_name if pass_type == "internal" else record.name
+    success_msg = f"{'Entry' if scan_type == 'ENTRY' else 'Exit'} successful \u2014 {name}"
+    _log("VALID", f"{scan_type} scan (by National ID) recorded for {name}.", record.qr_token)
 
     return jsonify({
         "success": True,
         "result": "VALID",
         "message": success_msg,
-        "name": visitor_name,
-        "national_id": national_id,
-        "host_name": host_name,
+        "name": name,
         "pass_type": pass_type,
     })
 
@@ -1391,10 +1353,10 @@ def seed_demo_data():
     if User.query.first():
         return
     users = [
-        {"login_id": "admin",     "name": "John Doe",      "role": "admin",    "password": "admin123"},
-        {"login_id": "guard01",   "name": "Bob Smith",     "role": "guard",    "password": "guard123"},
-        {"login_id": "student01", "name": "Alice Johnson", "role": "internal", "password": "student123"},
-        {"login_id": "staff01",   "name": "Jane Doe",      "role": "internal", "password": "staff123"},
+        {"login_id": "admin",     "name": "Mrs. Grace Nwosu",    "role": "admin",    "password": "admin123"},
+        {"login_id": "guard01",   "name": "Officer Daniel Kofi", "role": "guard",    "password": "guard123"},
+        {"login_id": "student01", "name": "Amina Yusuf",         "role": "internal", "password": "student123"},
+        {"login_id": "staff01",   "name": "Dr. Kevin Mensah",    "role": "internal", "password": "staff123"},
     ]
     for u in users:
         user = User(login_id=u["login_id"], name=u["name"], role=u["role"])
@@ -1421,10 +1383,6 @@ def inject_globals():
             + VisitorRequest.query.filter_by(status="Pending").count()
         ),
         "visitors": VisitorRequest.query.count(),
-        "visitors_today": (
-            PassRequest.query.filter_by(visit_date=today).count()
-            + VisitorRequest.query.filter_by(visit_date=today).count()
-        ),
         "audit": AuditLog.query.count(),
     }
     is_authenticated = "user_id" in session
@@ -1438,6 +1396,7 @@ def inject_globals():
 
 
 with app.app_context():
+    db.drop_all()
     db.create_all()
     seed_demo_data()
 
