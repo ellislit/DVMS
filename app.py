@@ -961,15 +961,33 @@ def api_export_csv():
     logs = AuditLog.query.order_by(AuditLog.scanned_at.desc()).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Timestamp", "Scan Type", "Token", "Pass Type", "Result", "Notes"])
+    writer.writerow(["Log ID", "Timestamp", "Scan Type", "Result", "Visitor Name", "National ID", "Destination/Dept", "Notes"])
     for log in logs:
+        v_name = ""
+        v_id = ""
+        v_dest = ""
+        
+        if log.pass_type == "internal":
+            req = PassRequest.query.filter_by(qr_token=log.qr_token).first()
+            if req:
+                v_name = req.visitor_name
+                v_id = req.visitor_national_id
+                v_dest = req.destination
+        elif log.pass_type == "visitor":
+            req = VisitorRequest.query.filter_by(qr_token=log.qr_token).first()
+            if req:
+                v_name = req.name
+                v_id = req.national_id
+                v_dest = req.department
+
         writer.writerow([
             log.id,
             log.scanned_at.strftime("%Y-%m-%d %H:%M:%S") if log.scanned_at else "",
             log.scan_type,
-            log.qr_token,
-            log.pass_type,
             log.result,
+            v_name,
+            v_id,
+            v_dest,
             log.note or "",
         ])
     from flask import Response
